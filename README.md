@@ -3,6 +3,7 @@ A TUI minesweeper game made with nice features
 
 description:
 - a minesweeper game for terminal emulators that aims to be somewhat polished and customizable
+- linux only program
 
 features:
 - mouse input
