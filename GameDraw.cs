@@ -14,8 +14,10 @@ namespace MineSweeper
                     return "  ";
                 default:
                     if (input >= 1 && input <= 8)   // the numbers
-                        return input.ToString() + input.ToString();
-                    else
+                        if (Program.tileNumbersStartWithZero)
+                            return '0' + input.ToString();
+                        else
+                            return input.ToString() + input.ToString();
                         return "??";
             }
         }
@@ -58,7 +60,7 @@ namespace MineSweeper
             }
         }
 
-        private static (string icon, ConsoleBufferColor fColor, ConsoleBufferColor bColor) tileVisualData(int boardTile, TileState tileState)
+        private static (string icon, ConsoleBufferColor fColor, ConsoleBufferColor bColor) tileAppearance(int boardTile, TileState tileState)
         {
             string icon;
             ConsoleBufferColor fColor;
@@ -113,80 +115,103 @@ namespace MineSweeper
             return (icon, fColor, bColor);
         }
 
-        // buffer ception, idk why i decided to make a buffer system here when my ConsoleBuffer already has a buffer system, well i guess it has some very minor performance benefits at least
-        public static void drawTiles(int xOffset, int yOffset)
+        public static void drawTiles(int xOffset, int yOffset, (int top, int bottom, int left, int right) cuts)
         {
+            (int topCut, int bottomCut, int leftCut, int rightCut) = cuts;
+
             int width = GameLogic.width;
             int height = GameLogic.height;
 
-            for (int y = 0; y < height; y++)
+            for (int y = topCut; y < height - bottomCut; y++)
             {
-                string buffer = "";
                 ConsoleBufferColor? previousFColor = null;
                 ConsoleBufferColor? previousBColor = null;
 
-                int conX = xOffset;
+                int conX = xOffset + leftCut * 2;
                 int conY = y + yOffset;
 
-                for (int x = 0; x < width; x++)
+                ConsoleBuffer.SetCursorPosition(conX, conY);
+
+                for (int x = leftCut; x < width - rightCut; x++)
                 {
                     int boardTile = (int)GameLogic.getBoardTile(x, y);
                     TileState tileState = GameLogic.getTileState(x, y);
 
-                    (string icon, ConsoleBufferColor fColor, ConsoleBufferColor bColor) = tileVisualData(boardTile, tileState);
+                    (string icon, ConsoleBufferColor fColor, ConsoleBufferColor bColor) = tileAppearance(boardTile, tileState);
 
                     if (previousBColor == null || previousBColor != bColor)
                     {
                         if (bColor == ConsoleBufferColor.Black && useDefaultTerminalBGColor)
-                            buffer += ConsoleBuffer.GetOldANSIColor(ConsoleBufferColor.Background, true);
+                            ConsoleBuffer.OldANSIColor(ConsoleBufferColor.Background, true);
                         else
-                            buffer += ConsoleBuffer.GetBackgroundColor(bColor);
+                            ConsoleBuffer.BackgroundColor(bColor);
 
                         previousBColor = bColor;
                     }
 
                     if (previousFColor == null || previousFColor != fColor)
                     {
-                        buffer += ConsoleBuffer.GetForegroundColor(fColor);
+                        ConsoleBuffer.ForegroundColor(fColor);
 
                         previousFColor = fColor;
                     }
 
-                    buffer += icon;
+                    ConsoleBuffer.Write(icon);
                 }
 
-                buffer += ConsoleBuffer.GetResetColor();    // reset color when moving on to making the next buffer
-
-                ConsoleBuffer.SetCursorPosition(conX, conY);
-                ConsoleBuffer.Write(buffer);
+                ConsoleBuffer.ResetColor();    // reset color when moving on to next line
             }
         }
 
-        public static void drawBorders(int xOffset, int yOffset)
+        public static void drawBorders(int xOffset, int yOffset, (int top, int bottom, int left, int right) cuts)
         {
+            (int topCut, int bottomCut, int leftCut, int rightCut) = cuts;
+
             int width = GameLogic.width;
             int height = GameLogic.height;
 
             int x2 = width + 2;
             int y2 = height + 2;
 
-            for (int x = 0; x < x2; x++)
-                for (int y = 0; y < y2; y++)
-                {
-                    if (x == 0 || x == x2 - 1 || y == 0 || y == y2 - 1)
-                    {
-                        int conX = x * 2 + xOffset;
-                        int conY = y + yOffset;
+            for (int y = topCut; y < y2 - bottomCut; y++)
+            {
+                int xStart = xOffset + leftCut * 2;
 
-                        ConsoleBuffer.SetCursorPosition(conX, conY);
+                int xEnd = xOffset + (x2 - 1) * 2;
+
+                ConsoleBuffer.SetCursorPosition(xStart, y + yOffset);
+
+                ConsoleBuffer.BackgroundColor(ConsoleBufferColor.White);
+
+                if (y == 0 || y == y2 - 1)
+                {
+                    int length = (x2 - leftCut - rightCut) * 2;
+
+                    length = Math.Max(length, 0);
+
+                    ConsoleBuffer.Write(new string(' ', length));
+                }
+                else
+                {
+                    if (leftCut < 1 && rightCut < x2)
+                    {
+                        ConsoleBuffer.Write("  ");
+                    }
+
+                    if (rightCut < 1 && leftCut < x2)
+                    {
+                        ConsoleBuffer.ResetColor();
+
+                        ConsoleBuffer.SetCursorPosition(xEnd, y + yOffset);
 
                         ConsoleBuffer.BackgroundColor(ConsoleBufferColor.White);
 
                         ConsoleBuffer.Write("  ");
-
-                        ConsoleBuffer.ResetColor();
                     }
                 }
+
+                ConsoleBuffer.ResetColor();
+            }
         }
     }
 }

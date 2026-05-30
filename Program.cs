@@ -2,11 +2,15 @@
 {
     class Program
     {
-        public static bool cheats { get; private set; } = true;
+        public const bool cheats = true;
 
-        public static bool windowSizeGame { get; private set; } = false;
+        public const bool windowSizeGame = false;
 
-        private static bool debugMode = true;
+        public const bool tileNumbersStartWithZero = true;      // tiles are numbered as "05" instead of "55"
+
+        public const bool canMoveMap = true;
+
+        public const bool debugMode = false;
 
         private static int gameWidth = 32;
 
@@ -86,7 +90,7 @@
             windowWidth = Console.WindowWidth;
             windowHeight = Console.WindowHeight;
 
-            bool windowOK = ProgramDraw.WindowSizeOK(-4, -2);     // if false, the screen that asks the user to resize the window should appear
+            bool windowOK = canMoveMap ? true : ProgramDraw.WindowSizeOK(-4, -2);     // if false, the screen that asks the user to resize the window should appear
 
             GameInput.Input(!windowOK, gameEnd, debugMode);
 

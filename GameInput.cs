@@ -2,7 +2,25 @@ namespace MineSweeper
 {
     class GameInput
     {
+        private static int wasMouseX = 0;
+
+        private static int wasMouseY = 0;
+
+        private static int mouseMovedX = 0;
+
+        private static int mouseMovedY = 0;
+
+        private static int _offsetX = 0;
+
+        public static int offsetX { get; private set; } = 0;
+
+        public static int offsetY { get; private set; } = 0;
+
         public static int clicks { get; private set; } = 0;
+
+        private static char kbInput;
+
+        private static bool gotKbInput = false;
 
         public static void InitInput()
         {
@@ -13,12 +31,28 @@ namespace MineSweeper
 
         public static void Input(bool resizeScreen, int gameEnd, bool debugMode = false)
         {
+            string kbInputString = mouseAndKeyboardInput.KbInput ?? "";   // mouseAndKeyboardInput.KbInput can be null (at the start of the program at least) because i coded stuff in a bit of a weird way i guess
+
+            if (string.IsNullOrEmpty(kbInputString))
+                gotKbInput = false;
+            else
+                gotKbInput = true;
+
+            // only the last character from keyboard input will be handled, this behavior might cause issues but everything is way easier to code this way
+            foreach (char c in kbInputString)
+            {
+                kbInput = c;
+            }
+
             if (resizeScreen)
             {
                 ResizeInput();
             }
             else
             {
+                if (!Program.windowSizeGame)
+                    MoveMapInput();
+
                 if (gameEnd != 0)
                 {
                     GameOverInput();
@@ -30,18 +64,51 @@ namespace MineSweeper
             }
         }
 
+        public static void MoveMapInput()
+        {
+            int mouseState = mouseAndKeyboardInput.mouseState;
+
+            int mouseX = mouseAndKeyboardInput.mouseX;
+
+            int mouseY = mouseAndKeyboardInput.mouseY;
+
+            if (gotKbInput && kbInput == 'f')
+            {
+                _offsetX = 0;
+                offsetY = 0;
+            }
+
+            if (Program.canMoveMap)
+            {
+                if (mouseState == 1)
+                {
+                    mouseMovedX = 0;
+                    mouseMovedY = 0;
+                }
+                else
+                if (mouseState == 33)
+                {
+                    mouseMovedX = mouseX - wasMouseX;
+                    mouseMovedY = mouseY - wasMouseY;
+
+                    _offsetX += mouseMovedX;
+                    offsetY += mouseMovedY;
+                }
+
+                wasMouseX = mouseX;
+                wasMouseY = mouseY;
+            }
+
+            offsetX = _offsetX & ~1; 
+        }
+
         public static void InGameInput()
         {
             (int x, int y) = ProgramDraw.CalculateMouseGameCoords();
 
-            string kbInput = mouseAndKeyboardInput.KbInput ?? "";   // mouseAndKeyboardInput.KbInput can be null (at the start of the program at least) because i coded stuff in a bit of a weird way i guess
-
-            foreach (char c in kbInput)
+            if (gotKbInput && kbInput == 'c' && Program.cheats)
             {
-                if (c == 'c' && Program.cheats)
-                {
-                    GameSolverCheat.Cheat();
-                }
+                GameSolverCheat.Cheat();
             }
 
             if (!GameLogic.inBounds(x, y))

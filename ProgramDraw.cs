@@ -1,3 +1,7 @@
+using System.ComponentModel;
+using System.Reflection;
+using System.Runtime.InteropServices;
+
 namespace MineSweeper
 {
     class ProgramDraw
@@ -19,6 +23,12 @@ namespace MineSweeper
 
         private const string resizeMessage3 = "To use the current window size, you need to reset the game (right click)";
 
+        public static string debugText { get; set; } = "";
+
+        private static int offsetX = 0;
+
+        private static int offsetY = 0;
+
         public static void Write(bool resizeScreen, int gameEnd, bool debugMode = false)
         {
             if (resizeScreen)
@@ -29,13 +39,16 @@ namespace MineSweeper
             {
                 WriteGame();
 
-                if (WindowSizeOK(0, 2))
+                if (Program.canMoveMap || WindowSizeOK(0, 2))
                     WriteUI(debugMode, gameEnd);
             }
         }
 
         public static void WriteGame()
         {
+            int width = GameLogic.width;
+            int height = GameLogic.height;
+
             int x = 0;
             int y = 0;
 
@@ -43,11 +56,15 @@ namespace MineSweeper
             {
                 (x, y) = CalculateOffset();
 
-                if (WindowSizeOK())
-                    GameDraw.drawBorders(x - 2, y - 1);
+                int bX = x - 2;
+                int bY = y - 1;
+                int bWidth = width + 2;
+                int bHeight = height + 2;
+
+                GameDraw.drawBorders(x - 2, y - 1, CalculateCuts(bWidth, bHeight, bX, bY));
             }
 
-            GameDraw.drawTiles(x, y);
+            GameDraw.drawTiles(x, y, CalculateCuts(width, height, x, y));
         }
 
         public static void WriteEndScreen(int gameEnd)
@@ -85,15 +102,11 @@ namespace MineSweeper
 
             int minesTextX = x - 2;
 
-            int clicksTextX = x + GameWidth() - 1 - clicksText.Length;
+            int clicksTextX = x + GameWidth() - 1;
 
-            ConsoleBuffer.SetCursorPosition(minesTextX, topTextY);
+            WriteText(minesText, minesTextX, topTextY, false, false);
 
-            ConsoleBuffer.Write(minesText);
-
-            ConsoleBuffer.SetCursorPosition(clicksTextX, topTextY);
-
-            ConsoleBuffer.Write(clicksText);
+            WriteText(clicksText, clicksTextX, topTextY, true, false);
 
             if (gameEnd != 0)
             {
@@ -105,25 +118,17 @@ namespace MineSweeper
 
                 int bottomTextY = y + GameHeight();
 
-                int gameOverTextX = CalculateCenterXText(x - 2, GameWidth() + 1, gameOverText.Length);
-
-                int retryTextX = CalculateCenterXText(x - 2, GameWidth() + 1, tryAgainMessage.Length);
-
                 (int x, int y) gameInfoTextXY = (1, Program.windowHeight);
 
                 (int x, int y) seedTextXY = (gameInfoTextXY.x, gameInfoTextXY.y - 1);
 
-                ConsoleBuffer.SetCursorPosition(gameOverTextX, topTextY);
+                WriteText(gameOverText, x + (GameWidth() - 1) / 2, topTextY, false, true);
 
-                ConsoleBuffer.Write(gameOverText);
+                WriteText(tryAgainMessage, x + (GameWidth() - 1) / 2, bottomTextY, false, true);
 
-                ConsoleBuffer.SetCursorPosition(retryTextX, bottomTextY);
+                WriteText(seedText, seedTextXY, false, false);
 
-                ConsoleBuffer.Write(tryAgainMessage);
-
-                ConsoleBuffer.SetCursorPosition(seedTextXY);
-
-                ConsoleBuffer.Write(seedText);
+                WriteText(gameInfoText, gameInfoTextXY, false, false);
 
                 ConsoleBuffer.SetCursorPosition(gameInfoTextXY);
 
@@ -131,22 +136,67 @@ namespace MineSweeper
             }
 
             if (debugMode)
-                WriteDebug();
+                WriteDebugUI();
         }
 
-        private static void WriteDebug()
+        // returns true if visible, false if hidden
+        private static bool WriteText(string text, int x, int y, bool rtlText = false, bool centerText = false)
         {
-            //ConsoleBuffer.SetCursorPosition(0, 1);
+            int windowWidth = Program.windowWidth;
+            int windowHeight = Program.windowHeight;
 
-            //ConsoleBuffer.Write($"{ConsoleBuffer.LastBufferDifferent()}");
+            if (y < 1 || y > windowHeight)
+                return false;
 
-            //ConsoleBuffer.Write($"{clicks}, mines: {remainingMines}, seed: {seed}, mouseState: {mouseAndKeyboardInput.mouseState}, mouseButton: {mouseAndKeyboardInput.mouseButton}");
+            int leftCut = 0;
+            int rightCut = 0;
 
-            //ConsoleBuffer.SetCursorPosition(0, 2);
+            int length = text.Length;
+            int endX = x + length;
 
-            //(int width, int height) = GameLogic.getDimensions();
+            // calculate x
+            if (rtlText)
+                x -= length;
+            else if (centerText)
+                x -= length / 2;
 
-            //ConsoleBuffer.Write($"mines {GameLogic.mines}, tileCounter: {GameLogic.revealedTileCounter}, width: {width}, height: {height}, won: {width * height == GameLogic.revealedTileCounter + GameLogic.mines}");
+            // if string start or string end is out of bounds, add values to leftCut and rightCut appropriately
+            if (x < 1)
+            {
+                leftCut = -x + 1;
+            }
+            if (endX > windowWidth)
+            {
+                rightCut = endX - windowWidth - 1;
+            }
+
+            // if the cut variables are longer than string length the string must be hidden
+            if (leftCut > length || rightCut > length)
+                return false;
+
+            // make sure x is in bounds
+            x = Math.Max(x, 1);
+
+            text = text[leftCut..^rightCut];    // cut the beginning and end of the string
+
+            ConsoleBuffer.SetCursorPosition(x, y);
+            ConsoleBuffer.Write(text);
+
+            return true;
+        }
+
+        private static bool WriteText(string text, (int x, int y) xy, bool rtlText = false, bool centerText = false)
+        {
+            return WriteText(text, xy.x, xy.y, rtlText, centerText);
+        }
+
+        private static void WriteDebugUI()
+        {
+            ConsoleBuffer.SetCursorPosition(1, 1);
+
+            (int x, int y) = CalculateMouseGameCoords();
+
+            ConsoleBuffer.Write(debugText);
         }
 
         public static void TextScreen(string message, string message2, string message3 = "")
@@ -194,9 +244,23 @@ namespace MineSweeper
             return text;
         }
 
-        public static int CalculateCenterXText(int start, int end, int length)
+        // calculates necessary cuts which are made to the board or the borders
+        public static (int top, int bottom, int left, int right) CalculateCuts(int width, int height, int x, int y)
         {
-            return start + end / 2 - length / 2;
+            int windowWidth = Program.windowWidth & ~1;
+            int windowHeight = Program.windowHeight;
+
+            int top = y < 1 ? (-y + 1) : 0;
+            int bottom = y + height > windowHeight + 1 ? y + height - windowHeight - 1 : 0;
+            int left = x < 1 ? (-x + 1) / 2 : 0;
+            int right = x + width * 2 > windowWidth + 2 ? (x + width * 2 - windowWidth - 1) / 2 : 0;
+
+            return (
+                top,
+                bottom,
+                left,
+                right
+            );
         }
 
         // calculate mouse position in game coords
@@ -213,8 +277,8 @@ namespace MineSweeper
         // calculate the offset where the game is written
         public static (int x, int y) CalculateOffset()
         {
-            int centerX = Program.windowWidth / 2;
-            int centerY = Program.windowHeight / 2;
+            int centerX = Program.windowWidth / 2 + GameInput.offsetX;
+            int centerY = Program.windowHeight / 2 + GameInput.offsetY;
 
             centerX = centerX % 2 == 1 ? centerX : centerX - 1;
 
@@ -233,13 +297,11 @@ namespace MineSweeper
                 return Program.windowWidth > GameWidth() + widthTolerance && Program.windowHeight > GameHeight() + heightTolerance; // big enough window
         }
 
-        // made for windowSizeGame mode as off
         public static int GameWidth()
         {
             return GameLogic.width * 2 + 3;
         }
 
-        // made for windowSizeGame mode as off
         public static int GameHeight()
         {
             return GameLogic.height + 1;
