@@ -12,24 +12,26 @@ namespace MineSweeper
         [DllImport("libc", SetLastError = true)]
         static extern long write(int fd, byte[] buf, ulong count);
 
-        private static int cursorX = 0;
+        //private static int cursorX = 0;
 
-        private static int cursorY = 0;
+        //private static int cursorY = 0;
 
         private const string clearEscapeSequence = "\x1b[2J";    // clear the screen
 
         private const string defaultConsoleBuffer = "\x1b[1;1H"; // set cursor pos to 1, 1
 
-        private static string consoleBuffer = defaultConsoleBuffer;
+        private static StringBuilder consoleBuffer = new(defaultConsoleBuffer);
 
-        private static string lastBuffer = consoleBuffer;
+        private static StringBuilder lastBuffer = new(defaultConsoleBuffer);
+
+        private static StringBuilder tmpBuffer = new();
 
         public static void SetCursorPosition(int x, int y)
         {
-            cursorX = x;
-            cursorY = y;
+            //cursorX = x;
+            //cursorY = y;
 
-            consoleBuffer += $"\x1b[{y};{x}H";
+            consoleBuffer.Append($"\x1b[{y};{x}H");
         }
 
         public static void SetCursorPosition((int x, int y) xy)
@@ -39,35 +41,48 @@ namespace MineSweeper
 
         public static void Write(string text)
         {
-            consoleBuffer += text;
+            consoleBuffer.Append(text);
         }
 
         public static void Write(char text)
         {
-            consoleBuffer += text;
+            consoleBuffer.Append(text);
+        }
+
+        public static void Write(StringBuilder text)
+        {
+            consoleBuffer.Append(text);
         }
 
         public static void Write(int number)
         {
-            consoleBuffer += number.ToString();
+            consoleBuffer.Append(number);
         }
 
         public static void WriteLine(string text)
         {
-            consoleBuffer += text + '\n';
+            consoleBuffer.Append(text);
+            consoleBuffer.Append('\n');
         }
 
         public static void WriteLine(char text)
         {
-            consoleBuffer += text + '\n';
+            consoleBuffer.Append(text);
+            consoleBuffer.Append('\n');
         }
 
         public static void WriteLine(int number)
         {
-            consoleBuffer += number.ToString() + '\n';
+            consoleBuffer.Append(number);
+            consoleBuffer.Append('\n');
         }
 
         public static void Clear()
+        {
+            consoleBuffer.Append(clearEscapeSequence);
+        }
+
+        public static void ClearNow()
         {
             // Write the clear escape sequence
             byte[] bytes = Encoding.UTF8.GetBytes(clearEscapeSequence);
@@ -78,7 +93,7 @@ namespace MineSweeper
 
         public static void BackgroundColor(ConsoleBufferColor color, bool OldANSI = false)
         {
-            consoleBuffer += GetBackgroundColor(color, OldANSI);
+            consoleBuffer.Append(GetBackgroundColor(color, OldANSI));
         }
 
         public static string GetBackgroundColor(ConsoleBufferColor color, bool OldANSI = false)
@@ -91,7 +106,7 @@ namespace MineSweeper
 
         public static void ForegroundColor(ConsoleBufferColor color, bool OldANSI = false)
         {
-            consoleBuffer += GetForegroundColor(color, OldANSI);
+            consoleBuffer.Append(GetForegroundColor(color, OldANSI));
         }
 
         public static string GetForegroundColor(ConsoleBufferColor color, bool OldANSI = false)
@@ -104,7 +119,7 @@ namespace MineSweeper
 
         public static void ResetColor()
         {
-            consoleBuffer += GetResetColor();
+            consoleBuffer.Append(GetResetColor());
         }
 
         public static string GetResetColor()
@@ -130,7 +145,7 @@ namespace MineSweeper
         // Non-RGB color
         public static void Color(ConsoleBufferColor color, bool background = false)
         {
-            consoleBuffer += GetColor(color, background);
+            consoleBuffer.Append(GetColor(color, background));
         }
 
         public static string GetColor(ConsoleBufferColor color, bool background = false)
@@ -147,7 +162,7 @@ namespace MineSweeper
         // Default color
         public static void Color(bool background = false, bool bright = false)
         {
-            consoleBuffer += GetColor(background, bright);
+            consoleBuffer.Append(GetColor(background, bright));
         }
 
         public static string GetColor(bool background = false, bool bright = false)
@@ -162,7 +177,7 @@ namespace MineSweeper
         // Non-RGB old ANSI color
         public static void OldANSIColor(ConsoleBufferColor color, bool background = false)
         {
-            consoleBuffer += GetOldANSIColor(color, background); 
+            consoleBuffer.Append(GetOldANSIColor(color, background)); 
         }
 
         public static string GetOldANSIColor(ConsoleBufferColor color, bool background = false)
@@ -176,7 +191,7 @@ namespace MineSweeper
         // RGB color
         public static void SetColor(int red, int green, int blue, bool background = false)
         {
-            consoleBuffer += GetColorEscape(red, green, blue, background);
+            consoleBuffer.Append(GetColorEscape(red, green, blue, background));
         }
 
         public static string GetColorEscape(int red, int green, int blue, bool background = false)
@@ -202,22 +217,22 @@ namespace MineSweeper
 
         public static void BufferWrite(bool resetBuffer = true, bool clearScreen = true)
         {
-            string buffer;
-
             if (clearScreen)
-                buffer = clearEscapeSequence + consoleBuffer;
-            else
-                buffer = consoleBuffer;
+                tmpBuffer.Append(clearEscapeSequence);
 
-            byte[] bytes = Encoding.UTF8.GetBytes(buffer);
+            tmpBuffer.Append(consoleBuffer);
+
+            byte[] bytes = Encoding.UTF8.GetBytes(tmpBuffer.ToString());
 
             // fd 1 = stdout
             write(1, bytes, (ulong)bytes.Length);
 
-            lastBuffer = consoleBuffer;
+            lastBuffer.Clear().Append(consoleBuffer);       // apparently this works, so this is Clear() then Append()
+
+            tmpBuffer.Clear();
 
             if (resetBuffer)
-                consoleBuffer = defaultConsoleBuffer;
+                BufferReset();
         }
 
         public static char BufferGetCellChar(int x, int y)
@@ -246,12 +261,21 @@ namespace MineSweeper
 
         public static void BufferReset()
         {
-            consoleBuffer = defaultConsoleBuffer;
+            consoleBuffer.Clear().Append(defaultConsoleBuffer);
         }
 
         public static bool LastBufferDifferent()
         {
-            return consoleBuffer != lastBuffer;
+            if (consoleBuffer.Length != lastBuffer.Length)
+                return true;
+
+            for (int i = 0; i < consoleBuffer.Length; i++)
+            {
+                if (consoleBuffer[i] != lastBuffer[i])
+                    return true;
+            }
+
+            return false;
         }
     }
 }

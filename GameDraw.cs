@@ -1,118 +1,66 @@
+using System.Text;
+
 namespace MineSweeper
 {
     class GameDraw
     {
         private const bool useDefaultTerminalBGColor = false;
 
-        private static string cellIcons(int input)
+        private static (string icon, ConsoleBufferColor fColor, ConsoleBufferColor bColor)[] tileAppearance =
         {
-            switch (input)
-            {
-                case -1:    // mine
-                    return "🯧🯦";    // alt: 𜷂𜷖
-                case 0:
-                    return "  ";
-                default:
-                    if (input >= 1 && input <= 8)   // the numbers
-                        if (Program.tileNumbersStartWithZero)
-                            return '0' + input.ToString();
-                        else
-                            return input.ToString() + input.ToString();
-                        return "??";
-            }
-        }
-
-        private static ConsoleBufferColor boardFColors(int input)
+            (icon: "[]", fColor: ConsoleBufferColor.Gray,       bColor: ConsoleBufferColor.DarkGray),   // hidden
+            (icon: "  ", fColor: ConsoleBufferColor.Black,      bColor: ConsoleBufferColor.Black),      // revealed
+            (icon: "[]", fColor: ConsoleBufferColor.Red,        bColor: ConsoleBufferColor.DarkGray),   // flag
+            (icon: "??", fColor: ConsoleBufferColor.Black,      bColor: ConsoleBufferColor.DarkGray),   // question mark
+            (icon: "[]", fColor: ConsoleBufferColor.DarkGray,   bColor: ConsoleBufferColor.Red),        // misplaced flag
+            (icon: "🯧🯦", fColor: ConsoleBufferColor.DarkGray,   bColor: ConsoleBufferColor.DarkRed)     // exploded mine
+        };
+        private static (string icon, ConsoleBufferColor fColor, ConsoleBufferColor bColor)[] boardAppearance =
         {
-            switch (input)
-            {
-                case (int)BoardTile.Mine:    // mine
-                    return ConsoleBufferColor.DarkGray;
-                case 0:
-                    return ConsoleBufferColor.Black;
-                case 1:
-                    return ConsoleBufferColor.Blue;
-                case 2:
-                    return ConsoleBufferColor.Green;
-                case 3:
-                    return ConsoleBufferColor.Red;
-                case 4:
-                    return ConsoleBufferColor.Magenta;
-                case 5:
-                    return ConsoleBufferColor.DarkYellow;
-                case 6:
-                    return ConsoleBufferColor.Cyan;
-                case 7:
-                    return ConsoleBufferColor.DarkGray;
-                case 8:
-                    return ConsoleBufferColor.DarkRed;
-                default:
-                    return ConsoleBufferColor.Black;
-            }
-        }
-
-        private static ConsoleBufferColor boardBColors(int input)
+            (icon: "  ", fColor: ConsoleBufferColor.Black,      bColor: ConsoleBufferColor.Black),  // 0
+            (icon: "01", fColor: ConsoleBufferColor.Blue,       bColor: ConsoleBufferColor.Black),  // 1
+            (icon: "02", fColor: ConsoleBufferColor.Green,      bColor: ConsoleBufferColor.Black),  // 2
+            (icon: "03", fColor: ConsoleBufferColor.Red,        bColor: ConsoleBufferColor.Black),  // 3
+            (icon: "04", fColor: ConsoleBufferColor.Magenta,    bColor: ConsoleBufferColor.Black),  // 4
+            (icon: "05", fColor: ConsoleBufferColor.DarkYellow, bColor: ConsoleBufferColor.Black),  // 5
+            (icon: "06", fColor: ConsoleBufferColor.Cyan,       bColor: ConsoleBufferColor.Black),  // 6
+            (icon: "07", fColor: ConsoleBufferColor.DarkGray,   bColor: ConsoleBufferColor.Black),  // 7
+            (icon: "08", fColor: ConsoleBufferColor.DarkRed,    bColor: ConsoleBufferColor.Black),  // 8
+            (icon: "🯧🯦", fColor: ConsoleBufferColor.DarkGray,   bColor: ConsoleBufferColor.Black)   // 9, mine  alt: 𜷂𜷖
+        };
+        private static (string icon, ConsoleBufferColor fColor, ConsoleBufferColor bColor)[] boardAppearanceAlt =
         {
-            switch (input)
-            {
-                default:
-                    return ConsoleBufferColor.Black;
-            }
-        }
+            (icon: "  ", fColor: ConsoleBufferColor.Black,      bColor: ConsoleBufferColor.Black),  // 0
+            (icon: "11", fColor: ConsoleBufferColor.Blue,       bColor: ConsoleBufferColor.Black),  // 1
+            (icon: "22", fColor: ConsoleBufferColor.Green,      bColor: ConsoleBufferColor.Black),  // 2
+            (icon: "33", fColor: ConsoleBufferColor.Red,        bColor: ConsoleBufferColor.Black),  // 3
+            (icon: "44", fColor: ConsoleBufferColor.Magenta,    bColor: ConsoleBufferColor.Black),  // 4
+            (icon: "55", fColor: ConsoleBufferColor.DarkYellow, bColor: ConsoleBufferColor.Black),  // 5
+            (icon: "66", fColor: ConsoleBufferColor.Cyan,       bColor: ConsoleBufferColor.Black),  // 6
+            (icon: "77", fColor: ConsoleBufferColor.DarkGray,   bColor: ConsoleBufferColor.Black),  // 7
+            (icon: "88", fColor: ConsoleBufferColor.DarkRed,    bColor: ConsoleBufferColor.Black),  // 8
+            (icon: "🯧🯦", fColor: ConsoleBufferColor.DarkGray,   bColor: ConsoleBufferColor.Black)   // 9, mine  alt: 𜷂𜷖
+        };
 
-        private static (string icon, ConsoleBufferColor fColor, ConsoleBufferColor bColor) tileAppearance(int boardTile, TileState tileState)
+        // these will store the actual color codes for the above arrays cached
+        private static (string fColor, string bColor)[] tileColorCodes = new (string, string)[tileAppearance.Length];
+        private static (string fColor, string bColor)[] boardColorCodes = new (string, string)[boardAppearance.Length];
+        private static string backgroundColorCode = ConsoleBuffer.GetOldANSIColor(ConsoleBufferColor.Background, true);
+        private static string resetColorCode = ConsoleBuffer.GetResetColor();
+
+        public static void initDraw()
         {
-            string icon;
-            ConsoleBufferColor fColor;
-            ConsoleBufferColor bColor;
-
-            switch (tileState)
+            for (int i = 0; i < tileAppearance.Length; i++)
             {
-                case TileState.Hidden:     // not revealed
-                    icon = "[]";
-
-                    fColor = ConsoleBufferColor.Gray;
-                    bColor = ConsoleBufferColor.DarkGray;
-                    break;
-                case TileState.Revealed:     // revealed
-                    icon = cellIcons(boardTile);
-
-                    fColor = boardFColors(boardTile);
-                    bColor = boardBColors(boardTile);
-                    break;
-                case TileState.Flag:     // flag
-                    icon = "[]";
-
-                    fColor = ConsoleBufferColor.Red;
-                    bColor = ConsoleBufferColor.DarkGray;
-                    break;
-                case TileState.QMark:     // question mark
-                    icon = "??";
-
-                    fColor = ConsoleBufferColor.Black;
-                    bColor = ConsoleBufferColor.DarkGray;
-                    break;
-                case TileState.MisplacedFlag:     // misplaced flag
-                    icon = "[]";
-
-                    fColor = ConsoleBufferColor.DarkGray;
-                    bColor = ConsoleBufferColor.Red;
-                    break;
-                case TileState.ExplodedMine:     // clicked mine
-                    icon = "🯧🯦";
-
-                    fColor = ConsoleBufferColor.DarkGray;
-                    bColor = ConsoleBufferColor.DarkRed;
-                    break;
-                default:    // invalid
-                    icon = "??";
-
-                    fColor = ConsoleBufferColor.White;
-                    bColor = ConsoleBufferColor.Black;
-                    break;
+                tileColorCodes[i].fColor = ConsoleBuffer.GetForegroundColor(tileAppearance[i].fColor);
+                tileColorCodes[i].bColor = ConsoleBuffer.GetBackgroundColor(tileAppearance[i].bColor);
             }
 
-            return (icon, fColor, bColor);
+            for (int i = 0; i < boardAppearance.Length; i++)
+            {
+                boardColorCodes[i].fColor = ConsoleBuffer.GetForegroundColor(boardAppearance[i].fColor);
+                boardColorCodes[i].bColor = ConsoleBuffer.GetBackgroundColor(boardAppearance[i].bColor);
+            }
         }
 
         // buffer ception, my ConsoleBuffer already has a buffer system but this buffer ception does improves performace quite nicely
@@ -123,48 +71,73 @@ namespace MineSweeper
             int width = GameLogic.width;
             int height = GameLogic.height;
 
+            StringBuilder buffer = new();
+
             for (int y = topCut; y < height - bottomCut; y++)
             {
-                string buffer = "";
-                ConsoleBufferColor? previousFColor = null;
-                ConsoleBufferColor? previousBColor = null;
+                string? previousFColor = null;
+                string? previousBColor = null;
 
                 int conX = xOffset + leftCut * 2;
                 int conY = y + yOffset;
 
-                ConsoleBuffer.SetCursorPosition(conX, conY);
+                // i'm too lazy to figure out how to make this cleaner without sacrificing performance so i'll just do this
+                buffer.Append("\x1b[");
+                buffer.Append(conY);
+                buffer.Append(';');
+                buffer.Append(conX);
+                buffer.Append('H');
 
                 for (int x = leftCut; x < width - rightCut; x++)
                 {
-                    int boardTile = (int)GameLogic.getBoardTile(x, y);
+                    string icon;
+                    string fColor;
+                    string bColor;
+                    
                     TileState tileState = GameLogic.getTileState(x, y);
 
-                    (string icon, ConsoleBufferColor fColor, ConsoleBufferColor bColor) = tileAppearance(boardTile, tileState);
+                    if (tileState != TileState.Revealed)
+                    {
+                        icon = tileAppearance[(int)tileState].icon;
+
+                        (fColor, bColor) = tileColorCodes[(int)tileState];
+                    }
+                    else
+                    {
+                        int boardTile = (int)GameLogic.getBoardTile(x, y);
+
+                        if (Program.tileNumbersStartWithZero)
+                            icon = boardAppearance[boardTile].icon;
+                        else
+                            icon = boardAppearanceAlt[boardTile].icon;
+
+                        (fColor, bColor) = boardColorCodes[boardTile];
+                    }
 
                     if (previousBColor == null || previousBColor != bColor)
                     {
-                        if (bColor == ConsoleBufferColor.Black && useDefaultTerminalBGColor)
-                            buffer += ConsoleBuffer.GetOldANSIColor(ConsoleBufferColor.Background, true);
+                        if (useDefaultTerminalBGColor && tileAppearance[(int)tileState].bColor == ConsoleBufferColor.Black)
+                            buffer.Append(backgroundColorCode);
                         else
-                            buffer += ConsoleBuffer.GetBackgroundColor(bColor);
+                            buffer.Append(bColor);
 
                         previousBColor = bColor;
                     }
 
                     if (previousFColor == null || previousFColor != fColor)
                     {
-                        buffer += ConsoleBuffer.GetForegroundColor(fColor);
+                        buffer.Append(fColor);
 
                         previousFColor = fColor;
                     }
 
-                    buffer += icon;
+                    buffer.Append(icon);
                 }
 
-                buffer += ConsoleBuffer.GetResetColor();    // reset color when moving on to making the next buffer
-
-                ConsoleBuffer.Write(buffer);
+                buffer.Append(resetColorCode);    // reset color when moving on to making the next buffer
             }
+
+            ConsoleBuffer.Write(buffer);
         }
 
         public static void drawBorders(int xOffset, int yOffset, (int top, int bottom, int left, int right) cuts)

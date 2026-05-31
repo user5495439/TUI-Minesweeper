@@ -6,9 +6,9 @@ namespace MineSweeper
 
         private static int wasMouseY = 0;
 
-        private static int mouseMovedX = 0;
+        public static int mouseMovedX { get; private set; } = 0;
 
-        private static int mouseMovedY = 0;
+        public static int mouseMovedY { get; private set; } = 0;
 
         private static int _offsetX = 0;
 
@@ -130,7 +130,7 @@ namespace MineSweeper
             switch (Click())
             {
                 case 2:
-                    Program.initProgram();
+                    Program.InitGame();
                     break;
             }
         }
@@ -143,7 +143,7 @@ namespace MineSweeper
                     Program.startConsoleWidth = Program.windowWidth;
                     Program.startConsoleHeight = Program.windowHeight;
 
-                    Program.initProgram();
+                    Program.InitGame();
                     break;
             }
         }

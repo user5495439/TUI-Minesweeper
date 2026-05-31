@@ -29,6 +29,13 @@ namespace MineSweeper
 
         private static int offsetY = 0;
 
+        public static (int top, int bottom, int left, int right) bCuts { get; private set; } = (0, 0, 0, 0);
+
+        public static void InitDraw()
+        {
+            GameDraw.initDraw();
+        }
+
         public static void Write(bool resizeScreen, int gameEnd, bool debugMode = false)
         {
             if (resizeScreen)
@@ -61,7 +68,9 @@ namespace MineSweeper
                 int bWidth = width + 2;
                 int bHeight = height + 2;
 
-                GameDraw.drawBorders(x - 2, y - 1, CalculateCuts(bWidth, bHeight, bX, bY));
+                bCuts = CalculateCuts(bWidth, bHeight, bX, bY);
+
+                GameDraw.drawBorders(x - 2, y - 1, bCuts);
             }
 
             GameDraw.drawTiles(x, y, CalculateCuts(width, height, x, y));

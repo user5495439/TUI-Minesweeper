@@ -4,7 +4,6 @@ namespace MineSweeper
 {
     public enum BoardTile
     {
-        Mine = -1,
         Zero = 0,
         One = 1,
         Two = 2,
@@ -13,6 +12,7 @@ namespace MineSweeper
         Five = 5,
         Six = 6,
         Seven = 7,
-        Eight = 8
+        Eight = 8,
+        Mine = 9
     }
 }

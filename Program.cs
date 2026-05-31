@@ -2,15 +2,15 @@
 {
     class Program
     {
-        public const bool cheats = true;
+        public static readonly bool cheats = true;
 
-        public const bool windowSizeGame = false;
+        public static readonly bool windowSizeGame = false;
 
-        public const bool tileNumbersStartWithZero = true;      // tiles are numbered as "05" instead of "55"
+        public static readonly bool tileNumbersStartWithZero = true;      // tiles are numbered as "05" instead of "55"
 
-        public const bool canMoveMap = true;
+        public static readonly bool canMoveMap = true;
 
-        public const bool debugMode = false;
+        public static readonly bool debugMode = false;
 
         private static int gameWidth = 32;
 
@@ -32,6 +32,8 @@
 
         public static int remainingMines { get; set; }
 
+        public static bool plzClearScreen { get; set; } = false;    // plz stands for "please"
+
         private static int gameEnd;
 
         private static int seed;
@@ -40,21 +42,23 @@
 
         private static void Main(string[] args)
         {
-            GameInput.InitInput();
-
             Task.Run(ResizeWatcher);
 
             windowWidth = Console.WindowWidth;
             windowHeight = Console.WindowHeight;
 
-            initProgram();
+            GameInput.InitInput();
+
+            ProgramDraw.InitDraw();
+
+            InitGame();
 
             Update();
 
             ProgramLoop();
         }
 
-        public static void initProgram()
+        public static void InitGame()
         {
             GameInput.ResetClicks();
 
@@ -97,7 +101,14 @@
             ProgramDraw.Write(!windowOK, gameEnd, debugMode);
 
             if (ConsoleBuffer.LastBufferDifferent())
-                ConsoleBuffer.BufferWrite();
+            {
+                // a hacky partial fix for the screen flickering
+                bool clearScreen = !(ProgramDraw.bCuts.top > 0 && ProgramDraw.bCuts.bottom > 0 && ProgramDraw.bCuts.left > 0 && ProgramDraw.bCuts.right > 0) || (GameInput.mouseMovedX == 0 && GameInput.mouseMovedY == 0) || plzClearScreen;
+
+                plzClearScreen = false;
+                
+                ConsoleBuffer.BufferWrite(true, clearScreen);
+            }
             else
                 ConsoleBuffer.BufferReset();
         }
@@ -135,6 +146,8 @@
 
                 if (previousWidth != width || previousHeight != height)
                 {
+                    plzClearScreen = true;
+
                     Update();
                 }
             }
