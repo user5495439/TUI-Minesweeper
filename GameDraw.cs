@@ -115,6 +115,7 @@ namespace MineSweeper
             return (icon, fColor, bColor);
         }
 
+        // buffer ception, my ConsoleBuffer already has a buffer system but this buffer ception does improves performace quite nicely
         public static void drawTiles(int xOffset, int yOffset, (int top, int bottom, int left, int right) cuts)
         {
             (int topCut, int bottomCut, int leftCut, int rightCut) = cuts;
@@ -124,6 +125,7 @@ namespace MineSweeper
 
             for (int y = topCut; y < height - bottomCut; y++)
             {
+                string buffer = "";
                 ConsoleBufferColor? previousFColor = null;
                 ConsoleBufferColor? previousBColor = null;
 
@@ -142,24 +144,26 @@ namespace MineSweeper
                     if (previousBColor == null || previousBColor != bColor)
                     {
                         if (bColor == ConsoleBufferColor.Black && useDefaultTerminalBGColor)
-                            ConsoleBuffer.OldANSIColor(ConsoleBufferColor.Background, true);
+                            buffer += ConsoleBuffer.GetOldANSIColor(ConsoleBufferColor.Background, true);
                         else
-                            ConsoleBuffer.BackgroundColor(bColor);
+                            buffer += ConsoleBuffer.GetBackgroundColor(bColor);
 
                         previousBColor = bColor;
                     }
 
                     if (previousFColor == null || previousFColor != fColor)
                     {
-                        ConsoleBuffer.ForegroundColor(fColor);
+                        buffer += ConsoleBuffer.GetForegroundColor(fColor);
 
                         previousFColor = fColor;
                     }
 
-                    ConsoleBuffer.Write(icon);
+                    buffer += icon;
                 }
 
-                ConsoleBuffer.ResetColor();    // reset color when moving on to next line
+                buffer += ConsoleBuffer.GetResetColor();    // reset color when moving on to making the next buffer
+
+                ConsoleBuffer.Write(buffer);
             }
         }
 
