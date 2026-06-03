@@ -150,6 +150,22 @@ namespace MineSweeper
             Console.Write("\x1b[?1006l");
         }
 
+        public static void enableExitHandling()
+        {
+            AppDomain.CurrentDomain.ProcessExit += (_, _) => cleanUp();
+
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            {
+                cleanUp();
+            };
+
+            TaskScheduler.UnobservedTaskException += (_, e) =>
+            {
+                cleanUp();
+                e.SetObserved();
+            };
+        }
+
         private static byte[] buf = new byte[1024];
 
         public static bool CtrlCExit { get; set; } = true;
@@ -200,13 +216,18 @@ namespace MineSweeper
 
         public static void safeExit(int exitCode)
         {
+            cleanUp();
+
+            Environment.Exit(exitCode);
+        }
+
+        public static void cleanUp()
+        {
             if (altScreenBuffer)
                 Console.Write("\x1b[?1049l");
 
             disableMouseEventTracking();
             disableRawMode();
-
-            Environment.Exit(exitCode);
         }
     }
 }

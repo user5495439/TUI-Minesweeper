@@ -24,6 +24,7 @@ namespace MineSweeper
 
         public static void InitInput()
         {
+            mouseAndKeyboardInput.enableExitHandling();
             mouseAndKeyboardInput.enableRawMode();
             mouseAndKeyboardInput.enableMouseEventTracking();
             mouseAndKeyboardInput.enableAltScreenBuffer();

@@ -42,6 +42,10 @@
 
         private static void Main(string[] args)
         {
+            ConsoleBuffer.clearBufferWhenWrite = true;
+
+            ConsoleBuffer.BufferInitialize();
+
             Task.Run(ResizeWatcher);
 
             windowWidth = Console.WindowWidth;
@@ -100,17 +104,7 @@
 
             ProgramDraw.Write(!windowOK, gameEnd, debugMode);
 
-            if (ConsoleBuffer.LastBufferDifferent())
-            {
-                // a hacky partial fix for the screen flickering
-                bool clearScreen = !(ProgramDraw.bCuts.top > 0 && ProgramDraw.bCuts.bottom > 0 && ProgramDraw.bCuts.left > 0 && ProgramDraw.bCuts.right > 0) || (GameInput.mouseMovedX == 0 && GameInput.mouseMovedY == 0) || plzClearScreen;
-
-                plzClearScreen = false;
-                
-                ConsoleBuffer.BufferWrite(true, clearScreen);
-            }
-            else
-                ConsoleBuffer.BufferReset();
+            ConsoleBuffer.BufferWrite();
         }
 
         // 2 = lost, 1 = won
@@ -146,7 +140,9 @@
 
                 if (previousWidth != width || previousHeight != height)
                 {
-                    plzClearScreen = true;
+                    ConsoleBuffer.BufferResize();
+
+                    ConsoleBuffer.BufferMarkAllDirty();
 
                     Update();
                 }

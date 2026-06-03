@@ -1,8 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Text;
 
-// todo: color manipulation and get char and get color from buffer
-// maybe todo 2: clean up some function names or provide descriptions
+// v2 or whatever. maybe to do: OldANSI colors
 
 namespace MineSweeper
 {
@@ -12,26 +11,128 @@ namespace MineSweeper
         [DllImport("libc", SetLastError = true)]
         static extern long write(int fd, byte[] buf, ulong count);
 
-        //private static int cursorX = 0;
+        const int leftOffset = 1;   // in linux terminals, cursor at 0 width is out of bounds
+        const int topOffset = 1;    // in linux terminals, cursor at 0 height is out of bounds
+        const int bottomOffset = -1;
+        const int rightOffset = -1;
 
-        //private static int cursorY = 0;
+        const char emptyCellChar = ' ';     // what char to use for empty cells
 
-        private const string clearEscapeSequence = "\x1b[2J";    // clear the screen
+        private static int bufferWidth;
+        private static int bufferHeight;
 
-        private const string defaultConsoleBuffer = "\x1b[1;1H"; // set cursor pos to 1, 1
+        private static int cursorX = 0;
+        private static int cursorY = 0;
 
-        private static StringBuilder consoleBuffer = new(defaultConsoleBuffer);
+        private static readonly RGB defaultFColor = RGB.Foreground;
+        private static readonly RGB defaultBColor = RGB.Background;
 
-        private static StringBuilder lastBuffer = new(defaultConsoleBuffer);
+        private static RGB cursorFColor = defaultFColor;
+        private static RGB cursorBColor = defaultBColor;
 
-        private static StringBuilder tmpBuffer = new();
+        private static bool allDirty = false;
+
+        public static bool clearBufferWhenWrite { get; set; } = false;
+
+        private static readonly Cell emptyCell = new Cell
+        {
+            cellFColor = defaultFColor,
+            cellBColor = defaultBColor,
+            cellChar = emptyCellChar
+        };
+
+        public struct RGB
+        {
+            private const int brightColorOffset = 50;
+
+            public byte r, g, b;
+
+            public RGB(byte red, byte green, byte blue)  // i'm relatively new to structs and chatgpt thinks i should use a constructor here
+            {
+                r = red; g = green; b = blue;
+            }
+
+            // absolutely genius way of getting rgb from hex by chatgpt
+            public static RGB FromInt(int value)
+            => new(
+                (byte)((value >> 16) & 0xFF),
+                (byte)((value >> 8) & 0xFF),
+                (byte)(value & 0xFF)
+            );
+
+            public static RGB Black => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.Black]);
+            public static RGB DarkRed => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.DarkRed]);
+            public static RGB DarkGreen => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.DarkGreen]);
+            public static RGB DarkYellow => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.DarkYellow]);
+            public static RGB DarkBlue => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.DarkBlue]);
+            public static RGB DarkMagenta => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.DarkMagenta]);
+            public static RGB DarkCyan => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.DarkCyan]);
+            public static RGB Gray => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.Gray]);
+
+            public static RGB DarkGray => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.DarkGray - brightColorOffset]);
+            public static RGB Red => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.Red - brightColorOffset]);
+            public static RGB Green => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.Green - brightColorOffset]);
+            public static RGB Yellow => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.Yellow - brightColorOffset]);
+            public static RGB Blue => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.Blue - brightColorOffset]);
+            public static RGB Magenta => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.Magenta - brightColorOffset]);
+            public static RGB Cyan => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.Cyan - brightColorOffset]);
+            public static RGB White => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.White - brightColorOffset]);
+
+            public static RGB Foreground => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.Foreground]);
+            public static RGB Background => FromInt(ConsoleBufferColorsBreeze.values[(int)ConsoleBufferColor.Background]);
+
+            // i used a bit of chatgpt here because this is completely new territory for me so i didn't know how to implement this before
+            public static bool operator ==(RGB left, RGB right) => 
+                left.r == right.r &&
+                left.g == right.g &&
+                left.b == right.b;
+
+            public static bool operator !=(RGB left, RGB right) => 
+                !(left == right);
+
+            public override bool Equals(object obj) =>
+                obj is RGB other && this == other;
+
+            public override int GetHashCode() =>
+                HashCode.Combine(r, g, b);
+        }
+
+        private struct Cell
+        {
+            public RGB cellFColor;
+
+            public RGB cellBColor;
+
+            public char cellChar;
+
+            public bool cellDirty;
+
+            public static bool operator ==(Cell left, Cell right) => 
+                left.cellFColor == right.cellFColor &&
+                left.cellBColor == right.cellBColor &&
+                left.cellChar == right.cellChar;
+
+            public static bool operator !=(Cell left, Cell right) => 
+                !(left == right);
+
+            public override bool Equals(object obj) =>
+                obj is Cell other && this == other;
+
+            public override int GetHashCode() =>
+                HashCode.Combine(cellFColor, cellBColor, cellChar);
+        }
+
+        private static Cell[,] buffer;
+
+        private static Cell[,] lastBuffer;
 
         public static void SetCursorPosition(int x, int y)
         {
-            //cursorX = x;
-            //cursorY = y;
+            // the cursor variables store array positions
+            cursorX = x - leftOffset;
+            cursorY = y - topOffset;
 
-            consoleBuffer.Append($"\x1b[{y};{x}H");
+            CursorBoundsCheck();
         }
 
         public static void SetCursorPosition((int x, int y) xy)
@@ -39,243 +140,270 @@ namespace MineSweeper
             SetCursorPosition(xy.x, xy.y);
         }
 
-        public static void Write(string text)
+        public static (int x, int y) GetCursorPosition()
         {
-            consoleBuffer.Append(text);
+            return (cursorX + leftOffset, cursorY + topOffset);
         }
 
         public static void Write(char text)
         {
-            consoleBuffer.Append(text);
+            CursorBoundsCheck();
+
+            ref Cell cell = ref buffer[cursorX, cursorY];
+
+            cursorX++;
+
+            if (cell.cellChar == text && cell.cellFColor == cursorFColor && cell.cellBColor == cursorBColor)
+                return;
+
+            cell.cellChar = text;
+
+            cell.cellBColor = cursorBColor;
+            cell.cellFColor = cursorFColor;
+
+            if (!clearBufferWhenWrite) cell.cellDirty = true;
+        }
+
+        public static void Write(string text)
+        {
+            int length = text.Length;
+
+            for (int i = 0; i < length; i++)
+            {
+                Write(text[i]);
+            }
         }
 
         public static void Write(StringBuilder text)
         {
-            consoleBuffer.Append(text);
+            int length = text.Length;
+
+            for (int i = 0; i < length; i++)
+            {
+                Write(text[i]);
+            }
         }
 
-        public static void Write(int number)
+        public static void SetColor(RGB rgb, bool background = false)
         {
-            consoleBuffer.Append(number);
+            if (background)
+                cursorBColor = rgb;
+            else
+                cursorFColor = rgb;
         }
 
-        public static void WriteLine(string text)
+        public static void SetColor(RGB fColor, RGB bColor)
         {
-            consoleBuffer.Append(text);
-            consoleBuffer.Append('\n');
+            cursorBColor = bColor;
+            cursorFColor = fColor;
         }
 
-        public static void WriteLine(char text)
+        private static void InitializeBuffer(ref Cell[,] buffer, bool updateSizes = true, bool resize = false)
         {
-            consoleBuffer.Append(text);
-            consoleBuffer.Append('\n');
+            if (updateSizes)
+            {
+                bufferWidth = Console.WindowWidth - rightOffset - leftOffset;
+                bufferHeight = Console.WindowHeight - bottomOffset - topOffset;
+            }
+
+            if (!resize)
+            {
+                buffer = new Cell[bufferWidth, bufferHeight];
+                return;
+            }
+
+            Cell[,] bufferCopy = buffer;
+
+            buffer = new Cell[bufferWidth, bufferHeight];
+
+            int MaxX = Math.Min(bufferCopy.GetLength(0), bufferWidth);
+            int MaxY = Math.Min(bufferCopy.GetLength(1), bufferHeight);
+            
+            for (int y = 0; y < MaxY; y++)
+            {
+                for (int x = 0; x < MaxX; x++)
+                {
+                    buffer[x, y] = bufferCopy[x, y];
+                }
+            }
         }
 
-        public static void WriteLine(int number)
+        public static void BufferInitialize()
         {
-            consoleBuffer.Append(number);
-            consoleBuffer.Append('\n');
+            InitializeBuffer(ref buffer, updateSizes: true, resize: false);
+
+            if (clearBufferWhenWrite) InitializeBuffer(ref lastBuffer, updateSizes: true, resize: false);
         }
 
-        public static void Clear()
+        public static void BufferResize()
         {
-            consoleBuffer.Append(clearEscapeSequence);
+            InitializeBuffer(ref buffer, updateSizes: true, resize: true);
+
+            if (clearBufferWhenWrite) InitializeBuffer(ref lastBuffer, updateSizes: true, resize: true);
         }
 
-        public static void ClearNow()
+        public static void BufferMarkAllDirty()
         {
-            // Write the clear escape sequence
-            byte[] bytes = Encoding.UTF8.GetBytes(clearEscapeSequence);
+            allDirty = true;
+        }
 
+        public static void BufferWrite()
+        {
+            if (clearBufferWhenWrite && !allDirty)
+                FindDirty(ref buffer, ref lastBuffer);
+
+            const string resetColorCode = "\x1b[0m";
+
+            StringBuilder writeBuffer = new();
+
+            for (int y = 0; y < bufferHeight; y++)
+            {
+                RGB? previousFColor = null;
+                RGB? previousBColor = null;
+
+                int dirtyLength = 0;
+
+                for (int x = 0; x < bufferWidth; x++)
+                {
+                    ref Cell cell = ref buffer[x, y];
+
+                    if (cell.cellDirty == false && !allDirty)
+                    {
+                        dirtyLength = 0;
+                        continue;
+                    }
+
+                    char cellChar = cell.cellChar;
+                    RGB cellFColor = cell.cellFColor;
+                    RGB cellBColor = cell.cellBColor;
+
+                    if (cellChar == '\0')
+                    {
+                        cellChar = emptyCell.cellChar;
+                        cellFColor = emptyCell.cellFColor;
+                        cellBColor = emptyCell.cellBColor;
+                    }
+
+                    if (dirtyLength == 0)
+                        writeBuffer.Append(GetCursorPosEscape(x + leftOffset, y + topOffset));
+
+                    dirtyLength++;
+
+                    if (previousFColor == null || previousFColor != cellFColor)
+                        writeBuffer.Append(GetColorEscape(cellFColor, false));
+
+                    if (previousBColor == null || previousBColor != cellBColor)
+                        writeBuffer.Append(GetColorEscape(cellBColor, true));
+
+                    previousFColor = cellFColor;
+                    previousBColor = cellBColor;
+
+                    writeBuffer.Append(cellChar);
+
+                    cell.cellDirty = false;
+                }
+
+                writeBuffer.Append(resetColorCode);
+            }
+
+            byte[] bytes = Encoding.UTF8.GetBytes(writeBuffer.ToString());
             // fd 1 = stdout
             write(1, bytes, (ulong)bytes.Length);
+
+            if (clearBufferWhenWrite)
+            {
+                lastBuffer = buffer;
+                InitializeBuffer(ref buffer, updateSizes: false);
+            }
+
+            allDirty = false;
         }
 
-        public static void BackgroundColor(ConsoleBufferColor color, bool OldANSI = false)
+        private static void FindDirty(ref Cell[,] Buffer, ref Cell[,] LastBuffer)
         {
-            consoleBuffer.Append(GetBackgroundColor(color, OldANSI));
+            for (int y = 0; y < bufferHeight; y++)
+            {
+                for (int x = 0; x < bufferWidth; x++)
+                {
+                    if (Buffer[x, y] != LastBuffer[x, y])
+                    {
+                        Buffer[x, y].cellDirty = true;
+                    }
+
+                    else
+                    {
+                        Buffer[x, y].cellDirty = false;
+                    }
+                }
+            }
         }
 
-        public static string GetBackgroundColor(ConsoleBufferColor color, bool OldANSI = false)
+        private static string GetCursorPosEscape(int x, int y)
         {
-            if (OldANSI)
-                return GetOldANSIColor(color, true);
-            else
-                return GetColor(color, true);
+            return $"\x1b[{y};{x}H";
         }
 
-        public static void ForegroundColor(ConsoleBufferColor color, bool OldANSI = false)
-        {
-            consoleBuffer.Append(GetForegroundColor(color, OldANSI));
-        }
-
-        public static string GetForegroundColor(ConsoleBufferColor color, bool OldANSI = false)
-        {
-            if (OldANSI)
-                return GetOldANSIColor(color, false);
-            else
-                return GetColor(color, false);
-        }
-
-        public static void ResetColor()
-        {
-            consoleBuffer.Append(GetResetColor());
-        }
-
-        public static string GetResetColor()
-        {
-            return "\x1b[0m";
-        }
-
-        private static (int red, int green, int blue) HexToRGB(int hexInt)
-        {
-            string hexString = hexInt.ToString("x");
-
-            string hexRed = hexString.Substring(0, 2);
-            string hexGreen = hexString.Substring(2, 2);
-            string hexBlue = hexString.Substring(4, 2);
-
-            int red = Convert.ToInt32(hexRed, 16);
-            int green = Convert.ToInt32(hexGreen, 16);
-            int blue = Convert.ToInt32(hexBlue, 16);
-
-            return (red, green, blue);
-        }
-
-        // Non-RGB color
-        public static void Color(ConsoleBufferColor color, bool background = false)
-        {
-            consoleBuffer.Append(GetColor(color, background));
-        }
-
-        public static string GetColor(ConsoleBufferColor color, bool background = false)
-        {
-            int colorInt = (int)color;
-
-            int index = colorInt - ((colorInt >= 60) ? 50 : 0);
-
-            (int red, int green, int blue) = HexToRGB(ConsoleBufferColorsBreeze.values[index]);
-
-            return GetColorEscape(red, green, blue, background);
-        }
-
-        // Default color
-        public static void Color(bool background = false, bool bright = false)
-        {
-            consoleBuffer.Append(GetColor(background, bright));
-        }
-
-        public static string GetColor(bool background = false, bool bright = false)
-        {
-            int index = 8 + (background ? 1 : 0) + (bright ? 10 : 0);
-
-            (int red, int green, int blue) = HexToRGB(ConsoleBufferColorsBreeze.values[index]);
-
-            return GetColorEscape(red, green, blue, background);
-        }
-
-        // Non-RGB old ANSI color
-        public static void OldANSIColor(ConsoleBufferColor color, bool background = false)
-        {
-            consoleBuffer.Append(GetOldANSIColor(color, background)); 
-        }
-
-        public static string GetOldANSIColor(ConsoleBufferColor color, bool background = false)
-        {
-            int index = (int)color + (background ? 40 : 30);
-
-            // foreground values: 30-37, 90-97, background values: 40-47, 100-107
-            return $"\x1b[{index}m"; 
-        }
-
-        // RGB color
-        public static void SetColor(int red, int green, int blue, bool background = false)
-        {
-            consoleBuffer.Append(GetColorEscape(red, green, blue, background));
-        }
-
-        public static string GetColorEscape(int red, int green, int blue, bool background = false)
+        private static string GetColorEscape(RGB rgb, bool background = false)
         {
             byte groundByte = 38;   // foreground
 
             if (background)
                 groundByte = 48;    // background
 
-            return $"\x1b[{groundByte};2;{red};{green};{blue}m";
-        }
-        
-        public static void SetColor(bool background, int red, int green, int blue)
-        {
-            SetColor(red, green, blue, background);
+            return $"\x1b[{groundByte};2;{rgb.r};{rgb.g};{rgb.b}m";
         }
 
-        // to manipulate non old ansi colors in the buffer (like making them darker or brighter)
-        public static void BufferManipulateColors()
+        public static void BackgroundColor(ConsoleBufferColor color)
         {
-            // too lazy to write this right now
+            SetPaletteColor(color, true);
         }
 
-        public static void BufferWrite(bool resetBuffer = true, bool clearScreen = true)
+        public static void ForegroundColor(ConsoleBufferColor color)
         {
-            if (clearScreen)
-                tmpBuffer.Append(clearEscapeSequence);
-
-            tmpBuffer.Append(consoleBuffer);
-
-            byte[] bytes = Encoding.UTF8.GetBytes(tmpBuffer.ToString());
-
-            // fd 1 = stdout
-            write(1, bytes, (ulong)bytes.Length);
-
-            lastBuffer.Clear().Append(consoleBuffer);       // apparently this works, so this is Clear() then Append()
-
-            tmpBuffer.Clear();
-
-            if (resetBuffer)
-                BufferReset();
+            SetPaletteColor(color, false);
         }
 
-        public static char BufferGetCellChar(int x, int y)
+        public static RGB GetRGBfromPalette(ConsoleBufferColor color)
         {
-            return ' '; // too lazy to write this right now
+            int index = (int)color - (((int)color >= 60) ? 50 : 0);
+
+            return RGB.FromInt(ConsoleBufferColorsBreeze.values[index]);
         }
 
-        public static (int red, int green, int blue) BufferGetCellColor(int x, int y)
+        public static void SetPaletteColor(ConsoleBufferColor color, bool background)
         {
-            return (0, 0, 0);   // too lazy to write this right now
+            SetColor(GetRGBfromPalette(color), background);
         }
 
-        public static ConsoleBufferColor RGBToBufferColor(int red, int green, int blue)
+        public static void ResetColor()
         {
-            return ConsoleBufferColor.Black;    // too lazy to write this right now
+            cursorFColor = defaultFColor;
+            cursorBColor = defaultBColor;
         }
 
-        public static (int red, int green, int blue) BufferColorToRGB(ConsoleBufferColor color)
+        public static char GetCellChar(int x, int y)
         {
-            int colorInt = (int)color;
-
-            int index = colorInt - ((colorInt >= 60) ? 50 : 0);
-
-            return HexToRGB(ConsoleBufferColorsBreeze.values[index]);
+            return buffer[x - leftOffset, y - topOffset].cellChar;
         }
 
-        public static void BufferReset()
+        public static RGB GetCellFColor(int x, int y)
         {
-            consoleBuffer.Clear().Append(defaultConsoleBuffer);
+            return buffer[x - leftOffset, y - topOffset].cellFColor;
         }
 
-        public static bool LastBufferDifferent()
+        public static RGB GetCellBColor(int x, int y)
         {
-            if (consoleBuffer.Length != lastBuffer.Length)
-                return true;
+            return buffer[x - leftOffset, y - topOffset].cellBColor;
+        }
 
-            for (int i = 0; i < consoleBuffer.Length; i++)
-            {
-                if (consoleBuffer[i] != lastBuffer[i])
-                    return true;
-            }
 
-            return false;
+        private static void CursorBoundsCheck()
+        {
+            cursorX = Math.Max(cursorX, 0);
+            cursorY = Math.Max(cursorY, 0);
+
+            cursorX = Math.Min(cursorX, bufferWidth - 1);
+            cursorY = Math.Min(cursorY, bufferHeight - 1);
         }
     }
 }
