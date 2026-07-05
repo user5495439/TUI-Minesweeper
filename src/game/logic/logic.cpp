@@ -3,33 +3,17 @@
 namespace game::logic
 {
 //public:
-    void GameLogic::generateBoard(GameSettings Settings)
+    GameLogic::GameLogic(GameConfig Config) : config(Config)
     {
-        settings = Settings;
+        vectorSizes = config.sizes + config.borderThickness * 2; // left & right border, top & bottom border
 
-        constexpr int borderThickness = constant::borderThickness;
+        boardStartPos = config.borderThickness;
 
-        vectorSizes =
-        {
-            settings.width + borderThickness * 2,  // left & right border,
-            settings.height + borderThickness * 2  // top & bottom border
-        };
-
-        boardStartPos =
-        {
-            borderThickness,
-            borderThickness
-        };
-
-        boardEndPos = 
-        {
-            boardStartPos.x + settings.width,
-            boardStartPos.y + settings.height
-        };
+        boardEndPos = boardStartPos + config.sizes;
 
         board = std::vector<Tile>(vectorSizes.x * vectorSizes.y);
 
-        rng.seed(settings.seed);
+        rng.seed(config.seed);
 
         revealedTileCounter = 0;
 
@@ -55,16 +39,16 @@ namespace game::logic
             {
                 revealedTileCounter++;
 
-                if (settings.width * settings.height == revealedTileCounter + settings.mines)
+                if (config.sizes.x * config.sizes.y == revealedTileCounter + config.mines)
                     return enums::RevealResult::Won;
 
-                if (tile->number == 0 && settings.revealZeroes)
+                if (tile->number == 0 && config.revealZeroes)
                     return revealZeroTiles(xy);
                 
                 return enums::RevealResult::Safe;
             }
         }
-        else if (tile->state == enums::TileState::Revealed && settings.quickReveal)
+        else if (tile->state == enums::TileState::Revealed && config.quickReveal)
         {
             return quickRevealTiles(xy);
         }
@@ -170,12 +154,12 @@ namespace game::logic
 
                 if (tile->number == enums::BoardTile::Mine)              // if current tile is a mine
                 {
-                    if (settings.minesReplaceFlags || tile->state != enums::TileState::Flag)
+                    if (config.minesReplaceFlags || tile->state != enums::TileState::Flag)
                         tile->state = enums::TileState::Revealed;         // reveal it
                 }
 
                 // if current tile has a misplaced flag, place a misplaced flag on it
-                else if (settings.placeMisplacedFlags && tile->state == enums::TileState::Flag) 
+                else if (config.placeMisplacedFlags && tile->state == enums::TileState::Flag) 
                     tile->state = enums::TileState::MisplacedFlag;
             }
     }
@@ -207,7 +191,7 @@ namespace game::logic
             case enums::TileState::Revealed:   // revealed
                 return 0;
             case enums::TileState::Flag:       // flag
-                if (settings.qMarkEnabled)
+                if (config.qMarkEnabled)
                     tile->state = enums::TileState::QMark;
                 else
                     tile->state = enums::TileState::Hidden;
@@ -240,7 +224,7 @@ namespace game::logic
     {
         core::XY xy;
 
-        for (int i = 0; i < settings.mines; i++)
+        for (int i = 0; i < config.mines; i++)
         {
             xy.x = std::uniform_int_distribution<int>(boardStartPos.x, boardEndPos.x - 1)(rng);
             xy.y = std::uniform_int_distribution<int>(boardStartPos.y, boardEndPos.y - 1)(rng);
@@ -288,11 +272,9 @@ namespace game::logic
 
     void GameLogic::generateBorder()
     {
-        constexpr int borderThickness = constant::borderThickness;
-
         core::XY xyTemp;
 
-        for (int i = 0; i < borderThickness; i++)
+        for (int i = 0; i < config.borderThickness; i++)
         {
             // top and bottom borders
             for (core::XY xy { 0, i }; xy.x < vectorSizes.x; xy.x++)
@@ -307,7 +289,7 @@ namespace game::logic
             }
 
             // left and right
-            for (core::XY xy { i, borderThickness }; xy.y < vectorSizes.y - borderThickness; xy.y++)
+            for (core::XY xy { i, config.borderThickness }; xy.y < vectorSizes.y - config.borderThickness; xy.y++)
             {
                 xyTemp = xy;
 

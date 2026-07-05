@@ -20,7 +20,8 @@ int main()
 
     sigaction(SIGWINCH, &sa, nullptr);
 
-    Game::gameStart();
+    Game game;
+    game.gameLoop();
 
     return 0;
 }

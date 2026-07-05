@@ -144,18 +144,18 @@ namespace core::render
 
         static const char emptyCellChar = ' ';     // what char to use for empty cells
 
-        inline static XY cellBufferDimensions{};
+        static inline XY cellBufferDimensions{};
 
-        inline static XY cursorPos
+        static inline XY cursorPos
         {
             0,
             0
         };
 
-        inline static const RGB defaultFColor = RGB::Foreground();
-        inline static const RGB defaultBColor = RGB::Background();
+        static inline const RGB defaultFColor = RGB::Foreground();
+        static inline const RGB defaultBColor = RGB::Background();
 
-        inline static const Cell emptyCell
+        static inline const Cell emptyCell
         {
             defaultFColor,
             defaultBColor,
@@ -163,14 +163,14 @@ namespace core::render
             false
         };
 
-        inline static RGB cursorFColor = defaultFColor;
-        inline static RGB cursorBColor = defaultBColor;
+        static inline RGB cursorFColor = defaultFColor;
+        static inline RGB cursorBColor = defaultBColor;
 
-        inline static bool allDirty = false;
-        inline static bool clearBufferWhenWrite = false;
+        static inline bool allDirty = false;
+        static inline bool clearBufferWhenWrite = false;
 
-        inline static Cell* cellBuffer = nullptr;        // a raw dynamic array, not a vector because i want challenge
-        inline static Cell* lastCellBuffer = nullptr;
+        static inline Cell* cellBuffer = nullptr;        // a raw dynamic array, not a vector because i want challenge
+        static inline Cell* lastCellBuffer = nullptr;
 
         static Cell getCell(XY xy) { return cellBuffer[getBufferIndex( xy, cellBufferDimensions.x)]; }
         static int getBufferIndex(XY xy, int width) { return xy.y * width + xy.x; };

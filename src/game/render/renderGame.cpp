@@ -11,7 +11,7 @@ namespace game::render
 //public:
     void GameRender::drawTiles(core::XY offsets)
     {
-        const core::XY sizes = GameLogic::getVectorDimensions();
+        const core::XY sizes = gameLogic->getVectorDimensions();
         const Sides cuts = getCuts(sizes, offsets);
 
         for (core::XY xy { cuts.left, cuts.top }; xy.y < sizes.y - cuts.bottom; xy.y++)
@@ -28,7 +28,7 @@ namespace game::render
             {
                 TileAppearance tileAppearance{};
 
-                GameLogic::Tile tile = GameLogic::getTile(xy);
+                GameLogic::Tile tile = gameLogic->getTile(xy);
 
                 if (tile.state != enums::TileState::Revealed)
                 {
@@ -50,13 +50,13 @@ namespace game::render
 
     void GameRender::drawUI(core::XY offsets)
     {
-        const GameLogic::GameSettings settings = GameLogic::getSettings();
+        const GameLogic::GameConfig gameConfig = gameLogic->getConfig();
         const Game::GameStatus gameStatus = Game::getGameStatus();
         const int remainingMines = Game::getRemainingMines();
-        const int totalMines = settings.mines;
+        const int totalMines = gameConfig.mines;
         const int moves = Game::getMoves();
 
-        const core::XY boardSizes = GameLogic::getVectorDimensions();
+        const core::XY boardSizes = gameLogic->getVectorDimensions();
         const core::XY windowSizes = Renderer::getBufferDimensions();
 
         std::string minesString = formatMineswNumber(remainingMines, totalMines);
@@ -105,8 +105,8 @@ namespace game::render
 
         if (gameStatus != Game::GameStatus::Ongoing)
         {
-            std::string infoString = constant::gameOverInfoText1 + std::to_string(settings.width) + constant::gameOverInfoText2 + std::to_string(settings.height) + constant::gameOverInfoText3 + std::to_string(settings.mines);
-            std::string seedString = constant::gameOverSeedText + std::to_string(settings.seed);
+            std::string infoString = constant::gameOverInfoText1 + std::to_string(gameConfig.sizes.x) + constant::gameOverInfoText2 + std::to_string(gameConfig.sizes.y) + constant::gameOverInfoText3 + std::to_string(gameConfig.mines);
+            std::string seedString = constant::gameOverSeedText + std::to_string(gameConfig.seed);
             std::string gameOverString = gameStatus == Game::GameStatus::Won ? constant::winText : constant::lostText;
             std::string retryString = constant::retryText;
 

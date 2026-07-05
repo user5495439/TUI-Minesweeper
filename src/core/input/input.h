@@ -32,27 +32,27 @@ namespace core::input
         static bool filterKbInput(const std::string& input, std::string* output);
     
     private:
-        inline static constexpr char escapeEnableAnyEventMTracking[] = "\x1b[?1003h";
-        inline static constexpr char escapeEnableSGRmode[] = "\x1b[?1006h";
-        inline static constexpr char escapeDisableAnyEventMTracking[] = "\x1b[?1003l";
-        inline static constexpr char escapeDisableSGRmode[] = "\x1b[?1006l";
+        static inline constexpr char escapeEnableAnyEventMTracking[] = "\x1b[?1003h";
+        static inline constexpr char escapeEnableSGRmode[] = "\x1b[?1006h";
+        static inline constexpr char escapeDisableAnyEventMTracking[] = "\x1b[?1003l";
+        static inline constexpr char escapeDisableSGRmode[] = "\x1b[?1006l";
 
-        inline static constexpr char escapeEnableHideCursor[] = "\x1b[?25l";
-        inline static constexpr char escapeDisableHideCursor[] = "\x1b[?25h";
+        static inline constexpr char escapeEnableHideCursor[] = "\x1b[?25l";
+        static inline constexpr char escapeDisableHideCursor[] = "\x1b[?25h";
 
-        inline static constexpr char escapeEnableAltScreenBuffer[] = "\x1b[?1049h";
-        inline static constexpr char escapeDisableAltScreenBuffer[] = "\x1b[?1049l";
+        static inline constexpr char escapeEnableAltScreenBuffer[] = "\x1b[?1049h";
+        static inline constexpr char escapeDisableAltScreenBuffer[] = "\x1b[?1049l";
 
         static inline termios orig{};
 
-        inline static int wakeupPipe[2]{};
+        static inline int wakeupPipe[2]{};
 
-        inline static bool autoInitialized = false;
+        static inline bool autoInitialized = false;
 
-        inline static bool rawModeEnabled = false;
-        inline static bool mouseEventTrackingEnabled = false;
-        inline static bool hideCursorEnabled = false;
-        inline static bool altScreenBufferEnabled = false;
+        static inline bool rawModeEnabled = false;
+        static inline bool mouseEventTrackingEnabled = false;
+        static inline bool hideCursorEnabled = false;
+        static inline bool altScreenBufferEnabled = false;
 
         static void cleanUp();
         static void signalHandler(int sig);

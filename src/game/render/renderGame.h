@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../core/render/renderer.h"
+#include "../logic/logic.h"
 #include <string>
 
 namespace game::render
@@ -10,6 +11,9 @@ namespace game::render
     class GameRender
     {
     public:
+        GameRender() {};
+        GameRender(logic::GameLogic* GameLogic) { gameLogic = GameLogic; };
+
         struct Sides
         {
             int top;
@@ -18,10 +22,10 @@ namespace game::render
             int right;
         };
 
-        static void drawTiles(core::XY offsets);
-        static void drawUI(core::XY offsets);
+        void drawTiles(core::XY offsets);
+        void drawUI(core::XY offsets);
     #ifdef DEBUG
-        static void drawDebug();
+        void drawDebug();
     #endif
 
     private:
@@ -32,7 +36,7 @@ namespace game::render
             colors bColor;
         };
 
-        inline static const TileAppearance hiddenTileAppearance[]
+        static inline const TileAppearance hiddenTileAppearance[]
         {
             {"[]", Gray, DarkGray},
             {"  ", Black, Black},
@@ -44,7 +48,7 @@ namespace game::render
             {"  ", Foreground, Background}
         };
 
-        inline static const TileAppearance revealedTileAppearance[]
+        static inline const TileAppearance revealedTileAppearance[]
         {
             { "  ", Black, Black },
             { "01", Blue, Black },
@@ -59,7 +63,7 @@ namespace game::render
             { "??", Foreground, Red }
         };
 
-        inline static const TileAppearance revealedTileAppearanceAlt[]
+        static inline const TileAppearance revealedTileAppearanceAlt[]
         {
             { "  ", Black, Black },
             { "11", Blue, Black },
@@ -74,7 +78,9 @@ namespace game::render
             { "??", Foreground, Red }
         };
 
-        static Sides getCuts(core::XY sizes, core::XY offsets);
-        static std::string formatMineswNumber(int input, size_t max);
+        logic::GameLogic* gameLogic = nullptr;
+
+        Sides getCuts(core::XY sizes, core::XY offsets);
+        std::string formatMineswNumber(int input, size_t max);
     };
 }

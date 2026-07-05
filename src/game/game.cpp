@@ -1,6 +1,7 @@
 #include "game.h"
 #include "constant/constants.h"
 #include "input/input.h"
+#include "logic/logic.h"
 #include "render/renderGame.h"
 #include <random>
 
@@ -9,15 +10,21 @@ namespace game
     using namespace core::render;
 
 //public:
-    void Game::gameStart()
+    Game::Game()
     {
-        gameInit();
-        input::GameInput::inputInit();
-        update();
-        gameLoop();
+        gameRestart();
+        gameRender = render::GameRender(&gameLogic);
+        gameInput = input::GameInput(&gameLogic);
     }
 
-    void Game::gameInit()
+    void Game::gameRestart()
+    {
+        gameLogic = logic::GameLogic(getGameConfig());
+        resetRemainingMines();
+        resetMoves();
+    }
+
+    logic::GameLogic::GameConfig Game::getGameConfig()
     {
         using namespace constant;
 
@@ -25,12 +32,13 @@ namespace game
         int seed = rd();
         int mines = minesInDensity ? (gameWidth * gameHeight) * (constant::mines / 100.0) : constant::mines;
 
-        logic::GameLogic::GameSettings settings
+        logic::GameLogic::GameConfig gameConfig
         {
             gameWidth,
             gameHeight,
             mines,
             seed,
+            borderThickness,
             qMarkEnabled,
             quickReveal,
             revealZeroes,
@@ -38,29 +46,47 @@ namespace game
             minesReplaceFlags
         };
 
-        logic::GameLogic::generateBoard(settings);
-
-        resetRemainingMines();
-        resetMoves();
+        return gameConfig;
     }
 
     void Game::update()
     {
         core::XY boardOffsets = calculateOffset();
 
-        render::GameRender::drawTiles(boardOffsets);
-        render::GameRender::drawUI(boardOffsets);
+        gameRender.drawTiles(boardOffsets);
+        gameRender.drawUI(boardOffsets);
     #ifdef DEBUG
-        render::GameRender::drawDebug();
+        gameRender.drawDebug();
     #endif
 
         Renderer::bufferWrite();
     }
 
+    void Game::gameLoop()
+    {
+        update();
+
+        while (!gotExit)
+        {
+            gameInput.handleInput();
+
+            if (gotResize)
+            {
+                Renderer::bufferResize();
+
+                Renderer::bufferMarkAllDirty();
+
+                gotResize = 0;
+            }
+
+            update();
+        }
+    }
+
     core::XY Game::calculateOffset()
     {
         core::XY windowSizes = Renderer::getBufferDimensions();
-        core::XY gameSizes = logic::GameLogic::getGameDimensions();
+        core::XY gameSizes = gameLogic.getGameDimensions();
 
         core::XY centerPos
         {
@@ -78,22 +104,4 @@ namespace game
     }
 
 //private:
-    void Game::gameLoop()
-    {
-        while (!gotExit)
-        {
-            input::GameInput::handleInput();
-
-            if (gotResize)
-            {
-                Renderer::bufferResize();
-
-                Renderer::bufferMarkAllDirty();
-
-                gotResize = 0;
-            }
-
-            update();
-        }
-    }
 }

@@ -1,16 +1,9 @@
 #include "input.h"
 #include "../game.h"
-#include "../logic/logic.h"
-#include <string>
 
 namespace game::input
 {
 //public:
-    void GameInput::inputInit()
-    {
-        MouseAndKeyboardInput::autoInitialize();
-    }
-
     void GameInput::handleInput()
     {
         inputType = readInput();
@@ -37,18 +30,18 @@ namespace game::input
     {
         using namespace game::enums;
 
-        if (!logic::GameLogic::inBounds(mouseGamePos) || Game::getGameStatus() != Game::GameStatus::Ongoing)
+        if (!gameLogic->inBounds(mouseGamePos) || Game::getGameStatus() != Game::GameStatus::Ongoing)
             return;
 
-        switch (logic::GameLogic::revealTile(mouseGamePos))
+        switch (gameLogic->revealTile(mouseGamePos))
         {
             case RevealResult::Lost:
                 Game::setGameStatus(Game::GameStatus::Lost);
-                logic::GameLogic::revealMines();
+                gameLogic->revealMines();
                 break;
             case RevealResult::Won:
                 Game::setGameStatus(Game::GameStatus::Won);
-                logic::GameLogic::placeFlagsOnMines();
+                gameLogic->placeFlagsOnMines();
                 break;
             case RevealResult::Safe:
                 Game::addMove();
@@ -66,15 +59,15 @@ namespace game::input
     {
         if (Game::getGameStatus() != Game::GameStatus::Ongoing)
         {
-            Game::gameInit();
+            Game::gameRestart();
             Game::setGameStatus(Game::GameStatus::Ongoing);
             return;
         }
 
-        if (!logic::GameLogic::inBounds(mouseGamePos))
+        if (!gameLogic->inBounds(mouseGamePos))
             return;
 
-        Game::addToRemainingMines(-logic::GameLogic::placeFlag(mouseGamePos));
+        Game::addToRemainingMines(-gameLogic->placeFlag(mouseGamePos));
     }
 
     GameInput::InputType GameInput::readInput()
