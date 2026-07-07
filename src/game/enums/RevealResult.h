@@ -6,7 +6,7 @@ namespace game::enums
     {
         Neutral,    // no action
         Safe,       // tile was safe
-        Lost,       // tile was a mine
-        Won         // all non mine tiles revealed
+        Won,        // all non mine tiles revealed
+        Lost        // tile was a mine
     };
 }

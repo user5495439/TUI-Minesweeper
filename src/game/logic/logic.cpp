@@ -8,7 +8,6 @@ namespace game::logic
         vectorSizes = config.sizes + config.borderThickness * 2; // left & right border, top & bottom border
 
         boardStartPos = config.borderThickness;
-
         boardEndPos = boardStartPos + config.sizes;
 
         board = std::vector<Tile>(vectorSizes.x * vectorSizes.y);
@@ -16,58 +15,125 @@ namespace game::logic
         rng.seed(config.seed);
 
         revealedTileCounter = 0;
+        gameMoves = 0;
+        remainingMines = config.mines;
+        gameStatus = enums::GameStatus::Ongoing;
 
         generateMines();
         generateNeighbours();
         generateBorder();
     }
 
-    enums::RevealResult GameLogic::revealTile(core::XY xy)
+    void GameLogic::revealTile(core::XY xy)
+    {
+        enums::RevealResult result = tileReveal(xy);
+
+        switch (result)
+        {
+            case enums::RevealResult::Neutral:
+                break;
+            case enums::RevealResult::Safe:
+                gameMoves++;
+                break;
+            case enums::RevealResult::Won:
+                gameOver(enums::GameStatus::Won);
+                break;
+            case enums::RevealResult::Lost:
+                gameOver(enums::GameStatus::Lost);
+                break;
+        }
+    }
+
+    void GameLogic::placeFlag(core::XY xy)
     {
         Tile* tile = &board[getBoardIndex(xy)];
 
-        if (tile->state == enums::TileState::Hidden)   // not revealed
+        switch (tile->state)
         {
-            tile->state = enums::TileState::Revealed; // revealed
+            case enums::TileState::Hidden:
+                tile->state = enums::TileState::Flag;
+                remainingMines -= 1;
+                return;
+            case enums::TileState::Revealed:
+                return;
+            case enums::TileState::Flag:
+                if (config.qMarkEnabled)
+                    tile->state = enums::TileState::QMark;
+                else
+                    tile->state = enums::TileState::Hidden;
 
-            if (tile->number == enums::BoardTile::Mine)  // mine
+                remainingMines += 1;
+                return;
+            case enums::TileState::QMark:
+                tile->state = enums::TileState::Hidden;
+                return;
+            default:    // invalid value
+                return;
+        }
+    }
+
+    bool GameLogic::inBounds(core::XY xy)
+    {
+        return xy.x >= 0 && xy.x < vectorSizes.x && xy.y >= 0 && xy.y < vectorSizes.y;
+    }
+
+//private:
+    enums::RevealResult GameLogic::tileReveal(core::XY xy)
+    {
+        Tile* tile = &board[getBoardIndex(xy)];
+
+        enums::RevealResult result = enums::RevealResult::Neutral;
+
+        if (tile->state == enums::TileState::Hidden)
+        {
+            tile->state = enums::TileState::Revealed;
+            revealedTileCounter++;
+
+            if (tile->number == enums::BoardTile::Mine)
             {
-                tile->state = enums::TileState::ExplodedMine; // clicked mine
-                return enums::RevealResult::Lost;
+                tile->state = enums::TileState::ExplodedMine;
+                
+                result = enums::RevealResult::Lost;
             }
             else
             {
-                revealedTileCounter++;
-
                 if (config.sizes.x * config.sizes.y == revealedTileCounter + config.mines)
-                    return enums::RevealResult::Won;
-
-                if (tile->number == 0 && config.revealZeroes)
-                    return revealZeroTiles(xy);
-                
-                return enums::RevealResult::Safe;
+                {
+                    result = enums::RevealResult::Won;
+                }
+                else if (tile->number == 0)
+                {
+                    if (config.revealZeroes) result = massTileReveal(xy, true);
+                }
+                else
+                {
+                    result = enums::RevealResult::Safe;
+                }
             }
         }
         else if (tile->state == enums::TileState::Revealed && config.quickReveal)
         {
-            return quickRevealTiles(xy);
+            result = massTileReveal(xy, false);
         }
 
-        return enums::RevealResult::Neutral;
+        return result;
     }
 
-    enums::RevealResult GameLogic::quickRevealTiles(core::XY xy)
+    enums::RevealResult GameLogic::massTileReveal(core::XY xy, bool skipFlagsCheck)
     {
         int nFlags = 0;
-        //int nQmarks = 0;
+        int nQmarks = 0;
         bool safeResult = false;
 
         // two passes, first pass checks if the appropriate amount of flags are placed to neighbouring tiles and second one actually reveals them
-        for (int i = 0; i < 2; i++)
+        for (int i = skipFlagsCheck; i < 2; i++)
         {
             for (core::XY ixy { -1, -1 }; ixy.x <= 1; ixy.x++)
                 for (ixy.y = -1; ixy.y <= 1; ixy.y++)
                 {
+                    if (ixy.x == 0 && ixy.y == 0)
+                        continue;
+
                     // nxy, neighbour x and y
                     core::XY nxy
                     {
@@ -81,20 +147,20 @@ namespace game::logic
                     // nTile, neighbour tile
                     Tile* nTile = &board[getBoardIndex(nxy)];
                     
-                    // first pass, calculate flags
+                    // first pass, calculate flags and question marks
                     if (i == 0)
                     {
                         if (nTile->state == enums::TileState::Flag)
                             nFlags++;
 
-                        //if (nTile->state == enums::TileState::QMark)      // i left this here if i want to incorporate question marks into the quickReveal system somehow
-                            //nQmarks++;
+                        if (nTile->state == enums::TileState::QMark)
+                            nQmarks++;
                     }
 
-                    // second pass, check if the neighbour tile is not a revealed tile, and if true, reveal the tile
-                    else if (nTile->state != enums::TileState::Revealed)
+                    // second pass, check if the neighbour tile is a hidden tile, and if true, reveal the tile
+                    else if (nTile->state == enums::TileState::Hidden)
                     {
-                        enums::RevealResult result = revealTile(nxy);
+                        enums::RevealResult result = tileReveal(nxy);
 
                         if (result == enums::RevealResult::Safe)
                             safeResult = true;
@@ -104,42 +170,31 @@ namespace game::logic
                     }
                 }
 
-            if (nFlags != board[getBoardIndex(xy)].number)  // if the neighboring flags amount doesn't match what the board tile says, return neutral
-                return enums::RevealResult::Neutral;
+            if (
+                i == 0 &&                                            // if first pass (count flags and question marks)
+                nFlags != board[getBoardIndex(xy)].number &&         // and number of flags doesn't match what the board tile says
+                (nFlags > board[getBoardIndex(xy)].number ||         // and number of flags is higher than what the board tile says
+                nFlags + nQmarks <= board[getBoardIndex(xy)].number) // or number of flags and question marks is smaller or equal than what the board tile says
+            )
+                return enums::RevealResult::Neutral;                 // return neutral
         }
 
-        return (nFlags > 0 && safeResult) ? enums::RevealResult::Safe : enums::RevealResult::Neutral;  // return neutral if no neighbouring flags and oneResult is false (means the tile is a zero or no new tiles revealed)
+        return (nFlags + nQmarks > 0 && safeResult) ? enums::RevealResult::Safe : enums::RevealResult::Neutral;  // return neutral if no neighbouring flags or question marks and safeResult is false (means the tile is a zero or no new tiles revealed)
     }
 
-    // this method can probably be somehow combined with the quick reveal system method
-    enums::RevealResult GameLogic::revealZeroTiles(core::XY xy)
+    void GameLogic::placeFlagsOnMines()
     {
-        for (core::XY ixy { -1, -1 }; ixy.x <= 1; ixy.x++)
-            for (ixy.y = -1; ixy.y <= 1; ixy.y++)
+        for (core::XY xy = boardStartPos; xy.x < boardEndPos.x; xy.x++) // width, x axis
+            for (xy.y = boardStartPos.y; xy.y < boardEndPos.y; xy.y++)  // height, y axis
             {
-                // nxy, neighbour x and y
-                core::XY nxy
-                {
-                    xy.x + ixy.x,
-                    xy.y + ixy.y 
-                };
+                Tile* tile = &board[getBoardIndex(xy)];
 
-                if (!inBounds(nxy))
+                if (tile->state == enums::TileState::Flag)        // skip already placed flags
                     continue;
 
-                // nTile, neighbour tile
-                Tile* nTile = &board[getBoardIndex(nxy)];
-
-                if ((xy.x != nxy.x || xy.y != nxy.y) && nTile->state != enums::TileState::Revealed)
-                {
-                    enums::RevealResult result = revealTile(nxy);
-
-                    if (result != enums::RevealResult::Neutral && result != enums::RevealResult::Safe)
-                        return result;
-                }
+                if (tile->number == enums::BoardTile::Mine)       // if current tile is a mine
+                    tile->state = enums::TileState::Flag;         // place a flag on it
             }
-
-        return enums::RevealResult::Neutral;
     }
 
     void GameLogic::revealMines()
@@ -162,62 +217,6 @@ namespace game::logic
                 else if (config.placeMisplacedFlags && tile->state == enums::TileState::Flag) 
                     tile->state = enums::TileState::MisplacedFlag;
             }
-    }
-
-    void GameLogic::placeFlagsOnMines()
-    {
-        for (core::XY xy = boardStartPos; xy.x < boardEndPos.x; xy.x++) // width, x axis
-            for (xy.y = boardStartPos.y; xy.y < boardEndPos.y; xy.y++)  // height, y axis
-            {
-                Tile* tile = &board[getBoardIndex(xy)];
-
-                if (tile->state == enums::TileState::Flag)        // skip already placed flags
-                    continue;
-
-                if (tile->number == enums::BoardTile::Mine)       // if current tile is a mine
-                    tile->state = enums::TileState::Flag;         // place a flag on it
-            }
-    }
-
-    int GameLogic::placeFlag(core::XY xy)
-    {
-        Tile* tile = &board[getBoardIndex(xy)];
-
-        switch (tile->state)
-        {
-            case enums::TileState::Hidden:     // not revealed
-                tile->state = enums::TileState::Flag;
-                return 1;
-            case enums::TileState::Revealed:   // revealed
-                return 0;
-            case enums::TileState::Flag:       // flag
-                if (config.qMarkEnabled)
-                    tile->state = enums::TileState::QMark;
-                else
-                    tile->state = enums::TileState::Hidden;
-                return -1;
-            case enums::TileState::QMark:      // question mark
-                tile->state = enums::TileState::Hidden;
-                return 0;
-            default:    // invalid value
-                return 0;
-        }
-    }
-
-    bool GameLogic::inBounds(core::XY xy)
-    {
-        return xy.x >= 0 && xy.x < vectorSizes.x && xy.y >= 0 && xy.y < vectorSizes.y;
-    }
-
-    GameLogic::Tile GameLogic::getTile(core::XY xy)
-    {
-        return inBounds(xy) ? board[getBoardIndex(xy)] : oobTile;
-    }
-
-//private:
-    int GameLogic::getBoardIndex(core::XY xy)
-    {
-        return xy.y * vectorSizes.x + xy.x;
     }
 
     void GameLogic::generateMines()
@@ -245,28 +244,33 @@ namespace game::logic
             {
                 Tile* tile = &board[getBoardIndex(xy)];
 
-                if (tile->number != enums::BoardTile::Mine)          // don't do anything if tile is a mine
-                    // check tiles in a 3x3 grid around the current tile
-                    for (core::XY ixy { -1, -1 }; ixy.x <= 1; ixy.x++)
-                        for (ixy.y = -1; ixy.y <= 1; ixy.y++)
+                if (tile->number == enums::BoardTile::Mine) // don't do anything if tile is a mine
+                    continue;
+                
+                // check tiles in a 3x3 grid around the current tile
+                for (core::XY ixy { -1, -1 }; ixy.x <= 1; ixy.x++)
+                    for (ixy.y = -1; ixy.y <= 1; ixy.y++)
+                    {
+                        if (ixy.x == 0 && ixy.y == 0)
+                            continue;
+
+                        // nxy, neighbour x and y
+                        core::XY nxy
                         {
-                            // nxy, neighbour x and y
-                            core::XY nxy
-                            {
-                                xy.x + ixy.x,
-                                xy.y + ixy.y 
-                            };
+                            xy.x + ixy.x,
+                            xy.y + ixy.y 
+                        };
 
-                            if (!inBounds(nxy))
-                                continue;
+                        if (!inBounds(nxy))
+                            continue;
 
-                            // nTile, neighbour tile
-                            Tile* nTile = &board[getBoardIndex(nxy)];
+                        // nTile, neighbour tile
+                        Tile* nTile = &board[getBoardIndex(nxy)];
 
-                            // check if the neighbour tile is a mine, and if it is, add 1 to the current tile
-                            if (nTile->number == enums::BoardTile::Mine)
-                                tile->number += 1;
-                        }
+                        // check if the neighbour tile is a mine, and if it is, add 1 to the current tile
+                        if (nTile->number == enums::BoardTile::Mine)
+                            tile->number += 1;
+                    }
             }
     }
 
@@ -299,6 +303,24 @@ namespace game::logic
 
                 board[getBoardIndex(xyTemp)] = borderTile;
             }
+        }
+    }
+
+    void GameLogic::gameOver(enums::GameStatus status)
+    {
+        gameStatus = status;
+
+        switch (gameStatus)
+        {
+            default:
+            case enums::GameStatus::Ongoing:
+                break;
+            case enums::GameStatus::Won:
+                placeFlagsOnMines();
+                break;
+            case enums::GameStatus::Lost:
+                revealMines();
+                break;
         }
     }
 }

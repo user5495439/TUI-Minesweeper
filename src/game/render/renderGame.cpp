@@ -51,10 +51,10 @@ namespace game::render
     void GameRender::drawUI(core::XY offsets)
     {
         const GameLogic::GameConfig gameConfig = gameLogic->getConfig();
-        const Game::GameStatus gameStatus = Game::getGameStatus();
-        const int remainingMines = Game::getRemainingMines();
+        const enums::GameStatus gameStatus = gameLogic->getGameStatus();
+        const int remainingMines = gameLogic->getRemainingMines();
         const int totalMines = gameConfig.mines;
-        const int moves = Game::getMoves();
+        const int moves = gameLogic->getMoves();
 
         const core::XY boardSizes = gameLogic->getVectorDimensions();
         const core::XY windowSizes = Renderer::getBufferDimensions();
@@ -103,11 +103,11 @@ namespace game::render
             Renderer::WriteFormatted(movesFixedPosString, Renderer::TextAlignment::RightToLeft);
         }
 
-        if (gameStatus != Game::GameStatus::Ongoing)
+        if (gameStatus != enums::GameStatus::Ongoing)
         {
             std::string infoString = constant::gameOverInfoText1 + std::to_string(gameConfig.sizes.x) + constant::gameOverInfoText2 + std::to_string(gameConfig.sizes.y) + constant::gameOverInfoText3 + std::to_string(gameConfig.mines);
             std::string seedString = constant::gameOverSeedText + std::to_string(gameConfig.seed);
-            std::string gameOverString = gameStatus == Game::GameStatus::Won ? constant::winText : constant::lostText;
+            std::string gameOverString = gameStatus == enums::GameStatus::Won ? constant::winText : constant::lostText;
             std::string retryString = constant::retryText;
 
             core::XY infoXY

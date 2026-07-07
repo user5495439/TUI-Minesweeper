@@ -1,12 +1,15 @@
 # TUI-Minesweeper
 Copyright (c) 2026 Anttoni (user5495439)
+
 Licensed under the GPL-3.0-or-later. See LICENSE for details.
 
 A text-based user interface Minesweeper for linux terminal emulators that uses no third party libraries
 
 ## Description
 minesweeper game with mouse support for terminal emulators that uses no third party libraries and aims to be somewhat polished and customizable
+
 currently linux only
+
 only a little bit of AI used, i have used AI only to learn C++ and for stuff i haven't been able to figure out how to implement
 
 ## Features
@@ -50,6 +53,7 @@ currently you can change settings by editing a file at src/game/constant/constan
 
 ## Compiling and running
 install g++ (or gcc depending on your distro) and make. if you do not know how to install these two, ask chatgpt for help
+
 then open up a terminal emulator and type:
 ```
 git clone https://github.com/user5495439/TUI-Minesweeper.git

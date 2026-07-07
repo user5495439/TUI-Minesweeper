@@ -63,7 +63,7 @@ namespace game::render
             { "??", Foreground, Red }
         };
 
-        static inline const TileAppearance revealedTileAppearanceAlt[]
+        /*static inline const TileAppearance revealedTileAppearanceAlt[]
         {
             { "  ", Black, Black },
             { "11", Blue, Black },
@@ -76,7 +76,7 @@ namespace game::render
             { "88", DarkRed, Black },
             { "<>", DarkGray, Black },
             { "??", Foreground, Red }
-        };
+        };*/
 
         logic::GameLogic* gameLogic = nullptr;
 

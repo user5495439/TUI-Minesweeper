@@ -1,5 +1,4 @@
-// ideas for this project: make it oo in certain places
-//                         make an abstraction layer or idk for mouse input
+// clean up: make an abstraction layer or idk for input
 
 #include "core/render/renderer.h"
 #include "game/game.h"
@@ -10,7 +9,6 @@ using namespace game;
 int main()
 {
     Renderer::bufferSetClearOnWrite(true);
-
     Renderer::bufferInitialize();
 
     struct sigaction sa{};

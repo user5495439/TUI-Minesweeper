@@ -15,7 +15,7 @@ namespace game::constant
     inline constexpr bool placeMisplacedFlags = true;
     inline constexpr bool minesReplaceFlags = false;
 
-    inline constexpr bool tileNumbersStartWithZero = true;  // tiles are numbered as "05" instead of "55"
+    //inline constexpr bool tileNumbersStartWithZero = true;  // tiles are numbered as "05" instead of "55"
 
     inline constexpr char kbResetCamera = 'f';
     inline constexpr char kbExit = 3;   // 3 = ctrl + c

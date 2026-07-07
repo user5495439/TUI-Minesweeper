@@ -28,27 +28,10 @@ namespace game::input
 //private:
     void GameInput::leftClick()
     {
-        using namespace game::enums;
-
-        if (!gameLogic->inBounds(mouseGamePos) || Game::getGameStatus() != Game::GameStatus::Ongoing)
+        if (!gameLogic->inBounds(mouseGamePos) || gameLogic->getGameStatus() != enums::GameStatus::Ongoing)
             return;
 
-        switch (gameLogic->revealTile(mouseGamePos))
-        {
-            case RevealResult::Lost:
-                Game::setGameStatus(Game::GameStatus::Lost);
-                gameLogic->revealMines();
-                break;
-            case RevealResult::Won:
-                Game::setGameStatus(Game::GameStatus::Won);
-                gameLogic->placeFlagsOnMines();
-                break;
-            case RevealResult::Safe:
-                Game::addMove();
-                break;
-            case RevealResult::Neutral:
-                break;
-        }
+        gameLogic->revealTile(mouseGamePos);
     }
 
     void GameInput::middleClick()
@@ -57,17 +40,16 @@ namespace game::input
 
     void GameInput::rightClick()
     {
-        if (Game::getGameStatus() != Game::GameStatus::Ongoing)
+        if (gameLogic->getGameStatus() != enums::GameStatus::Ongoing)
         {
             Game::gameRestart();
-            Game::setGameStatus(Game::GameStatus::Ongoing);
             return;
         }
 
         if (!gameLogic->inBounds(mouseGamePos))
             return;
 
-        Game::addToRemainingMines(-gameLogic->placeFlag(mouseGamePos));
+        gameLogic->placeFlag(mouseGamePos);
     }
 
     GameInput::InputType GameInput::readInput()

@@ -2,6 +2,7 @@
 
 #include "../../core/xy.h"
 #include "../enums/BoardTile.h"
+#include "../enums/GameStatus.h"
 #include "../enums/RevealResult.h"
 #include "../enums/TileState.h"
 #include "../constant/constants.h"
@@ -51,18 +52,18 @@ namespace game::logic
             enums::TileState::OOB
         };
 
-        enums::RevealResult revealTile(core::XY xy);
-        enums::RevealResult quickRevealTiles(core::XY xy); // quick reveal system so it's less annoying to play to some
-        enums::RevealResult revealZeroTiles(core::XY xy);  // this never returns RevealResult::Safe
-        void revealMines();
-        void placeFlagsOnMines();
-        int placeFlag(core::XY xy);
+        void revealTile(core::XY xy);
+        void placeFlag(core::XY xy);
         bool inBounds(core::XY xy);  // returns true if coordinate is in game bounds and false if not
-        Tile getTile(core::XY xy);
+        Tile getTile(core::XY xy) { return inBounds(xy) ? board[getBoardIndex(xy)] : oobTile; };
+        Tile* getTilePtr(core::XY xy) { return inBounds(xy) ? &board[getBoardIndex(xy)] : nullptr; };
         const GameConfig& getConfig() { return config; }
-        core::XY getGameDimensions() { return config.sizes; }
         core::XY getVectorDimensions() { return vectorSizes; }
+        enums::GameStatus getGameStatus() { return gameStatus; }
+        int getMoves() { return gameMoves; }
+        int getRemainingMines() { return remainingMines; }
     private:
+        enums::GameStatus gameStatus;
         std::vector<Tile> board;
         GameConfig config;
         std::mt19937 rng{};
@@ -70,10 +71,19 @@ namespace game::logic
         core::XY boardEndPos;
         core::XY vectorSizes;
         int revealedTileCounter;
+        int gameMoves;
+        int remainingMines;
 
-        int getBoardIndex(core::XY xy);
+        enums::RevealResult tileReveal(core::XY xy);
+        enums::RevealResult massTileReveal(core::XY xy, bool skipFlagsCheck); // quick reveal system so it's less annoying to play to some
+
+        void placeFlagsOnMines();
+        void revealMines();
+
         void generateMines();
         void generateNeighbours();
         void generateBorder();
+        void gameOver(enums::GameStatus status);
+        int getBoardIndex(core::XY xy) { return xy.y * vectorSizes.x + xy.x; };
     };
 }
