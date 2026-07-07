@@ -1,9 +1,9 @@
-#include <cstdint>
 #include <cstring>
 #include <string>
 #include <unistd.h>
 #include "renderer.h"
 #include "../platform/console/console.h"
+#include "colors.h"
 
 namespace core::render
 {
@@ -196,7 +196,7 @@ namespace core::render
 
     void Renderer::bufferWrite()
     {
-        const std::string resetColorCode = "\x1b[0m";
+        constexpr char resetColorCode[] = "\x1b[0m";
 
         if (clearBufferWhenWrite && !allDirty)
             findDirty(cellBuffer, lastCellBuffer);
@@ -212,7 +212,7 @@ namespace core::render
 
                 if (cell->debugMark == true)
                 {
-                    cell->cellBColor = RGB::DarkRed();
+                    cell->cellBColor = RGB::fromColors(DarkRed);
                     cell->cellChar = 'E';
                     cell->cellDirty = true;
                 }
@@ -249,15 +249,15 @@ namespace core::render
                 }
 
                 if (dirtyLength == 0)
-                    writeBuffer += getEscapeCursorPos( { xy.x + leftOffset, xy.y + topOffset } );
+                    appendANSICursorPos(writeBuffer, { xy.x + leftOffset, xy.y + topOffset } );
 
                 dirtyLength++;
 
                 if (previousFColor != cell->cellFColor || firstWrite)
-                    writeBuffer += getEscapeColor(cell->cellFColor, false);
+                    appendANSIColor(writeBuffer, cell->cellFColor, false);
 
                 if (previousBColor != cell->cellBColor || firstWrite)
-                    writeBuffer += getEscapeColor(cell->cellBColor, true);
+                    appendANSIColor(writeBuffer, cell->cellBColor, true);
 
                 previousFColor = cell->cellFColor;
                 previousBColor = cell->cellBColor;
@@ -284,21 +284,14 @@ namespace core::render
         allDirty = false;
     }
 
-    Renderer::RGB Renderer::getRGBfromPalette(colors color)
-    {
-        int index = color - ((color >= 60) ? 50 : 0);
-
-        return RGB::fromInt(paletteColors[index]);
-    }
-
     void Renderer::setPaletteColor(colors color, bool background)
     {
-        setColor(getRGBfromPalette(color), background);
+        setColor(RGB::fromColors(color), background);
     }
 
     void Renderer::setPaletteColor(colors fColor, colors bColor)
     {
-        setColor(getRGBfromPalette(fColor), getRGBfromPalette(bColor));
+        setColor(RGB::fromColors(fColor), RGB::fromColors(bColor));
     }
 
 //private:
@@ -385,32 +378,40 @@ namespace core::render
         }
     }
 
-    // i feel like these two methods below can be cleaned up
-    std::string Renderer::getEscapeCursorPos(XY xy)
+    void Renderer::appendANSICursorPos(std::string& buffer, XY xy)
     {
-        const std::string firstPart = "\x1b[";
-        const std::string secondPart = ";";
-        const std::string thirdPart = "H";
-
-        return firstPart + std::to_string(xy.y) + secondPart + std::to_string(xy.x) + thirdPart;
+        buffer += "\x1b[";
+        buffer += std::to_string(xy.y);
+        buffer += ";";
+        buffer += std::to_string(xy.x);
+        buffer += "H";
     }
 
     // apparently you can combine both foreground and background ANSI escape sequences into a single escape sequence, so that's an optimization waiting to be implemented
-    std::string Renderer::getEscapeColor(RGB rgb, bool background)
+    void Renderer::appendANSIColor(std::string& buffer, RGB rgb, bool background)
     {
-        std::uint8_t groundByte = background ? 48 : 38; // i'll use std::uint8_t instead of char here because with chars the code will place a character instead of number
+        if (*rgb.a == 0)
+        {
+            appendANSIDefaultColor(buffer, background);
+            return;
+        }
 
-        constexpr char firstPart[] = "\x1b[";
-        constexpr char secondPart[] = ";2;";
-        constexpr char thirdPart[] = ";";
-        constexpr char fourthPart[] = ";";
-        constexpr char fifthPart[] = "m";
+        buffer += "\x1b[";
+        buffer += std::to_string(38 + background * 10);
+        buffer += ";2;";
+        buffer += std::to_string(*rgb.r);
+        buffer += ";";
+        buffer += std::to_string(*rgb.g);
+        buffer += ";";
+        buffer += std::to_string(*rgb.b);
+        buffer += "m";
+    }
 
-        if (rgb.a == 0)
-            return firstPart + std::to_string(groundByte + 1) + fifthPart; // 39 and 49 are used to reset the foreground or background color to terminal default
-                                                                                // oddly enough to my testing 38 and 48 seem to also work? but 39 and 49 are what chatgpt recommended so i'll go with those
-
-        return firstPart + std::to_string(groundByte) + secondPart + std::to_string(rgb.r) + thirdPart + std::to_string(rgb.g) + fourthPart + std::to_string(rgb.b) + fifthPart;
+    void Renderer::appendANSIDefaultColor(std::string& buffer, bool background)
+    {
+        buffer += "\x1b[";
+        buffer += std::to_string(39 + background * 10);
+        buffer += "m";
     }
 
 #ifdef DEBUG
@@ -421,7 +422,6 @@ namespace core::render
 
         return false;
     }
-
 
     void Renderer::OOBDebugMark(XY xy)
     {

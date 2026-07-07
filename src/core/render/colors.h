@@ -48,34 +48,34 @@ namespace core::render
         //
         // Summary:
         //     The color dark gray. (BRIGHT BLACK)
-        DarkGray = 60,
+        DarkGray = 10,
         //
         // Summary:
         //     The color red. (BRIGHT RED)
-        Red = 61,
+        Red = 11,
         //
         // Summary:
         //     The color green. (BRIGHT GREEN)
-        Green = 62,
+        Green = 12,
         //
         // Summary:
         //     The color yellow. (BRIGHT YELLOW)
-        Yellow = 63,
+        Yellow = 13,
         //
         // Summary:
         //     The color blue. (BRIGHT BLUE)
-        Blue = 64,
+        Blue = 14,
         //
         // Summary:
         //     The color magenta (purplish-red). (BRIGHT MAGENTA)
-        Magenta = 65,
+        Magenta = 15,
         //
         // Summary:
         //     The color cyan (blue-green). (BRIGHT CYAN)
-        Cyan = 66,
+        Cyan = 16,
         //
         // Summary:
         //     The color white. (BRIGHT WHITE)
-        White = 67,
+        White = 17,
     };
 }
