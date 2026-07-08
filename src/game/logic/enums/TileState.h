@@ -1,6 +1,6 @@
 #pragma once
 
-namespace game::enums
+namespace game::logic
 {
     enum class TileState
     {

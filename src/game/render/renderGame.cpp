@@ -4,8 +4,6 @@
 #include <algorithm>
 #include <string>
 
-using namespace game::logic;
-
 namespace game::render
 {
 //public:
@@ -26,21 +24,11 @@ namespace game::render
 
             for (xy.x = cuts.left; xy.x < sizes.x - cuts.right; xy.x++)
             {
-                TileAppearance tileAppearance{};
+                enums::PublicTile tile = gameLogic->getTile(xy);
 
-                GameLogic::Tile tile = gameLogic->getTile(xy);
-
-                if (tile.state != enums::TileState::Revealed)
-                {
-                    tileAppearance = hiddenTileAppearance[static_cast<int>(tile.state)];
-                }
-                else
-                {
-                    tileAppearance = revealedTileAppearance[tile.number];
-                }
+                TileAppearance tileAppearance = tileAppearances[static_cast<int>(tile)];
 
                 Renderer::setPaletteColor(tileAppearance.fColor, tileAppearance.bColor);
-
                 Renderer::Write(tileAppearance.icon);
             }
         }
@@ -50,7 +38,7 @@ namespace game::render
 
     void GameRender::drawUI(core::XY offsets)
     {
-        const GameLogic::GameConfig gameConfig = gameLogic->getConfig();
+        const logic::GameLogic::GameConfig gameConfig = gameLogic->getConfig();
         const enums::GameStatus gameStatus = gameLogic->getGameStatus();
         const int remainingMines = gameLogic->getRemainingMines();
         const int totalMines = gameConfig.mines;

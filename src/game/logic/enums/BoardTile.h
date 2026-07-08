@@ -1,6 +1,6 @@
 #pragma once
 
-namespace game::enums
+namespace game::logic
 {
     // sike, no enums here
     struct BoardTile

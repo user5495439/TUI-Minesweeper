@@ -90,7 +90,8 @@ namespace game
             quickReveal,
             revealZeroes,
             placeMisplacedFlags,
-            minesReplaceFlags
+            minesReplaceFlags,
+            false
         };
 
         return gameConfig;

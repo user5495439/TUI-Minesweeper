@@ -36,7 +36,29 @@ namespace game::render
             colors bColor;
         };
 
-        static inline const TileAppearance hiddenTileAppearance[]
+        static inline const TileAppearance tileAppearances[]
+        {
+            { "  ", Black, Black },
+            { "01", Blue, Black },
+            { "02", Green, Black },
+            { "03", Red, Black },
+            { "04", Magenta, Black },
+            { "05", DarkYellow, Black },
+            { "06", Cyan, Black },
+            { "07", DarkGray, Black },
+            { "08", DarkRed, Black },
+            { "<>", DarkGray, Black },
+            {"[]", Gray, DarkGray},
+            {"  ", Black, Black},
+            {"[]", Red, DarkGray},
+            {"??", Black, DarkGray},
+            {"[]", DarkGray, Red},
+            {"<>", DarkGray, DarkRed},
+            {"  ", Background, White},
+            {"  ", Foreground, Background}
+        };
+
+        /*static inline const TileAppearance hiddenTileAppearance[]
         {
             {"[]", Gray, DarkGray},
             {"  ", Black, Black},
@@ -61,7 +83,7 @@ namespace game::render
             { "08", DarkRed, Black },
             { "<>", DarkGray, Black },
             { "??", Foreground, Red }
-        };
+        };*/
 
         /*static inline const TileAppearance revealedTileAppearanceAlt[]
         {
