@@ -46,7 +46,7 @@ namespace game::logic
 
     void GameLogic::placeFlag(core::XY xy)
     {
-        Tile* tile = getTilePtr(xy);
+        Tile* tile = tilePtr(xy);
 
         if (tile == nullptr)
             return;
@@ -80,21 +80,6 @@ namespace game::logic
         return xy.x >= 0 && xy.x < vectorSizes.x && xy.y >= 0 && xy.y < vectorSizes.y;
     }
 
-    void GameLogic::setTile(core::XY xy, int number, TileState state)
-    {
-        if (config.editBoard == false)
-            return;
-
-        Tile* tile = getTilePtr(xy);
-
-        if (tile == nullptr)
-            return;
-
-        tile->number = number;
-        tile->state = state;
-    }
-
-//private:
     enums::PublicTile GameLogic::tileToPublicTile(const Tile* tile)
     {
         if (tile == nullptr) return enums::PublicTile::OOB;
@@ -126,9 +111,10 @@ namespace game::logic
         return tile;
     }
 
+//private:
     RevealResult GameLogic::tileReveal(core::XY xy)
     {
-        Tile* tile = getTilePtr(xy);
+        Tile* tile = tilePtr(xy);
 
         if (tile == nullptr)
             return RevealResult::Neutral;
@@ -172,7 +158,7 @@ namespace game::logic
 
     RevealResult GameLogic::massTileReveal(core::XY xy, bool skipFlagsCheck)
     {
-        Tile* tile = getTilePtr(xy);
+        Tile* tile = tilePtr(xy);
 
         if (tile == nullptr)
             return RevealResult::Neutral;
@@ -198,7 +184,7 @@ namespace game::logic
                     };
 
                     // nTile, neighbour tile
-                    Tile* nTile = getTilePtr(nxy);
+                    Tile* nTile = tilePtr(nxy);
 
                     if (nTile == nullptr)
                         continue;
@@ -243,7 +229,7 @@ namespace game::logic
         for (core::XY xy = boardStartPos; xy.x < boardEndPos.x; xy.x++) // width, x axis
             for (xy.y = boardStartPos.y; xy.y < boardEndPos.y; xy.y++)  // height, y axis
             {
-                Tile* tile = getTilePtr(xy);
+                Tile* tile = tilePtr(xy);
 
                 if (tile->state == TileState::Flag)        // skip already placed flags
                     continue;
@@ -258,7 +244,7 @@ namespace game::logic
         for (core::XY xy = boardStartPos; xy.x < boardEndPos.x; xy.x++) // width, x axis
             for (xy.y = boardStartPos.y; xy.y < boardEndPos.y; xy.y++)  // height, y axis
             {
-                Tile* tile = getTilePtr(xy);
+                Tile* tile = tilePtr(xy);
 
                 if (tile->state == TileState::ExplodedMine)            // skip exploded mines
                     continue;
@@ -284,7 +270,7 @@ namespace game::logic
             xy.x = std::uniform_int_distribution<int>(boardStartPos.x, boardEndPos.x - 1)(rng);
             xy.y = std::uniform_int_distribution<int>(boardStartPos.y, boardEndPos.y - 1)(rng);
 
-            int* number = &getTilePtr(xy)->number;
+            int* number = &tilePtr(xy)->number;
 
             if (*number != BoardTile::Mine)
                 *number = BoardTile::Mine;
@@ -298,7 +284,7 @@ namespace game::logic
         for (core::XY xy = boardStartPos; xy.x < boardEndPos.x; xy.x++) // width, x axis
             for (xy.y = boardStartPos.y; xy.y < boardEndPos.y; xy.y++)  // height, y axis
             {
-                int* number = &getTilePtr(xy)->number;
+                int* number = &tilePtr(xy)->number;
 
                 if (*number == BoardTile::Mine) // don't do anything if tile is a mine
                     continue;
@@ -318,7 +304,7 @@ namespace game::logic
                         };
 
                         // nTile, neighbour tile
-                        Tile* nTile = getTilePtr(nxy);
+                        Tile* nTile = tilePtr(nxy);
 
                         if (nTile == nullptr)
                             continue;

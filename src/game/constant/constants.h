@@ -18,6 +18,8 @@ namespace game::constant
     //inline constexpr bool tileNumbersStartWithZero = true;  // tiles are numbered as "05" instead of "55"
 
     inline constexpr char kbResetCamera = 'f';
+    inline constexpr char kbCheat = 'c';
+    inline constexpr char kbToggleCheatUI = 'x';
     inline constexpr char kbExit = 3;   // 3 = ctrl + c
 
     inline constexpr char minesText[] = "Mines: ";

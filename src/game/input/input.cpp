@@ -90,6 +90,22 @@ namespace game::input
             {
                 Game::resetGameOffsets();
             }
+
+            if (c == constant::kbCheat)
+            {
+                Game::cheat();
+            }
+
+            if (c == constant::kbToggleCheatUI)
+            {
+                bool* showCheatUI = Game::getShowCheatUIPtr();
+                *showCheatUI = !*showCheatUI;
+                
+                if (*showCheatUI == true)
+                {
+                    Game::cheat();
+                }
+            }
         }
     }
 

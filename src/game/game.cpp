@@ -1,5 +1,7 @@
 #include "game.h"
 #include "constant/constants.h"
+#include "cheat/render/renderCheats.h"
+#include "cheat/logic/cheat.h"
 #include "input/input.h"
 #include "logic/logic.h"
 #include "render/renderGame.h"
@@ -15,6 +17,8 @@ namespace game
         gameLogic = logic::GameLogic(defaultGameConfig());
         gameRender = render::GameRender(&gameLogic);
         gameInput = input::GameInput(&gameLogic);
+        cheatsLogic = cheat::logic::CheatsLogic(&gameLogic);
+        cheatsRender = cheat::render::CheatsRender(&cheatsLogic);
     }
 
     void Game::gameLoop()
@@ -67,6 +71,8 @@ namespace game
     #ifdef DEBUG
         gameRender.drawDebug();
     #endif
+        if (constant::cheatsEnabled && showCheatUI)
+            cheatsRender.drawCheatsUI(boardOffsets);
 
         Renderer::bufferWrite();
     }
@@ -84,7 +90,7 @@ namespace game
             gameWidth,
             gameHeight,
             mines,
-            seed,
+            0,
             borderThickness,
             qMarkEnabled,
             quickReveal,
