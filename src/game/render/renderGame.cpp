@@ -151,6 +151,8 @@ namespace game::render
                 Renderer::WriteFormatted(retryString, Renderer::TextAlignment::RightToLeft);
             }
         }
+
+        Renderer::resetColor();
     }
 
 #ifdef DEBUG
@@ -166,6 +168,8 @@ namespace game::render
 
         Renderer::setCursorPos(xy);
         Renderer::WriteFormatted(*Game::getDebugTextPtr(), Renderer::TextAlignment::Centered);
+
+        Renderer::resetColor();
     }
 #endif
 

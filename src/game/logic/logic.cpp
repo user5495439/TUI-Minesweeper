@@ -1,4 +1,9 @@
 #include "logic.h"
+#include "enums/MineState.h"
+#include "enums/TileState.h"
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
 
 namespace game::logic
 {
@@ -12,7 +17,7 @@ namespace game::logic
 
         board = std::vector<Tile>(vectorSizes.x * vectorSizes.y);
 
-        rng.seed(config.seed);
+        randomProviderSeed(config.seed);
 
         revealedTileCounter = 0;
         gameMoves = 0;
@@ -84,9 +89,11 @@ namespace game::logic
     {
         if (tile == nullptr) return enums::PublicTile::OOB;
 
-        bool condition = tile->state == TileState::Revealed;
+        bool mineCondition = tile->mine == MineState::Yes;
 
-        int index = condition ? tile->number : static_cast<int>(tile->state) + 10; // TileState starts at number 10 in PublicTile
+        bool revealedCondition = tile->state == TileState::Revealed;
+
+        int index = revealedCondition ? (mineCondition ? static_cast<int>(enums::PublicTile::Mine) : tile->number) : static_cast<int>(tile->state) + 10; // TileState starts at number 10 in PublicTile
 
         return static_cast<enums::PublicTile>(index);
     }
@@ -97,15 +104,19 @@ namespace game::logic
 
         int pTileInt = static_cast<int>(pTile);
 
+        bool isAMine = pTile == enums::PublicTile::Mine || pTile == enums::PublicTile::RevealedMine;
+
         if (pTileInt < 10)
         {
-            tile.number = pTileInt;
+            tile.number = isAMine ? invalidNumber : pTileInt;
             tile.state = TileState::Revealed;
+            tile.mine = isAMine ? MineState::Yes : MineState::No;
         }
         else
         {
-            tile.number = BoardTile::Unknown;
+            tile.number = invalidNumber;
             tile.state = static_cast<TileState>(pTileInt - 10);
+            tile.mine = isAMine ? MineState::Yes : MineState::Unknown;
         }
 
         return tile;
@@ -126,10 +137,8 @@ namespace game::logic
             tile->state = TileState::Revealed;
             revealedTileCounter++;
 
-            if (tile->number == BoardTile::Mine)
+            if (tile->mine == MineState::Yes)
             {
-                tile->state = TileState::ExplodedMine;
-                
                 result = RevealResult::Lost;
             }
             else
@@ -234,7 +243,7 @@ namespace game::logic
                 if (tile->state == TileState::Flag)        // skip already placed flags
                     continue;
 
-                if (tile->number == BoardTile::Mine)       // if current tile is a mine
+                if (tile->mine == MineState::Yes)          // if current tile is a mine
                     tile->state = TileState::Flag;         // place a flag on it
             }
     }
@@ -246,13 +255,10 @@ namespace game::logic
             {
                 Tile* tile = tilePtr(xy);
 
-                if (tile->state == TileState::ExplodedMine)            // skip exploded mines
-                    continue;
-
-                if (tile->number == BoardTile::Mine)              // if current tile is a mine
+                if (tile->mine == MineState::Yes && tile->state != TileState::Revealed) // if current tile is a mine and it's not Revealed
                 {
                     if (config.minesReplaceFlags || tile->state != TileState::Flag)
-                        tile->state = TileState::Revealed;         // reveal it
+                        tile->state = TileState::RevealedMine;         // make it into a RevealedMine
                 }
 
                 // if current tile has a misplaced flag, place a misplaced flag on it
@@ -267,13 +273,13 @@ namespace game::logic
 
         for (int i = 0; i < config.mines; i++)
         {
-            xy.x = std::uniform_int_distribution<int>(boardStartPos.x, boardEndPos.x - 1)(rng);
-            xy.y = std::uniform_int_distribution<int>(boardStartPos.y, boardEndPos.y - 1)(rng);
+            xy.y = randomProvider(boardStartPos.y, boardEndPos.y - 1);
+            xy.x = randomProvider(boardStartPos.x, boardEndPos.x - 1);
 
-            int* number = &tilePtr(xy)->number;
+            MineState* mine = &tilePtr(xy)->mine;
 
-            if (*number != BoardTile::Mine)
-                *number = BoardTile::Mine;
+            if (*mine != MineState::Yes)
+                *mine = MineState::Yes;
             else
                 i--;
         }
@@ -285,16 +291,17 @@ namespace game::logic
             for (xy.y = boardStartPos.y; xy.y < boardEndPos.y; xy.y++)  // height, y axis
             {
                 int* number = &tilePtr(xy)->number;
+                MineState* mine = &tilePtr(xy)->mine;
 
-                if (*number == BoardTile::Mine) // don't do anything if tile is a mine
-                    continue;
+                //if (*mine == MineState::Yes) // don't do anything if tile is a mine
+                    //continue;
                 
                 // check tiles in a 3x3 grid around the current tile
                 for (core::XY ixy { -1, -1 }; ixy.x <= 1; ixy.x++)
                     for (ixy.y = -1; ixy.y <= 1; ixy.y++)
                     {
-                        if (ixy.x == 0 && ixy.y == 0)
-                            continue;
+                        //if (ixy.x == 0 && ixy.y == 0)
+                            //continue;
 
                         // nxy, neighbour x and y
                         core::XY nxy
@@ -310,7 +317,7 @@ namespace game::logic
                             continue;
 
                         // check if the neighbour tile is a mine, and if it is, add 1 to the current tile
-                        if (nTile->number == BoardTile::Mine)
+                        if (nTile->mine == MineState::Yes)
                             *number += 1;
                     }
             }
@@ -365,4 +372,49 @@ namespace game::logic
                 break;
         }
     }
+
+    int GameLogic::randomProvider(int a, int b)
+    {
+    #ifdef DEBUG
+        if (constant::debugRandom)
+        {
+            int range = std::abs(b - a) + 1;
+
+            int unadjusted = std::floor(rngDebug() * range);
+
+            int smaller = std::min(a, b);
+
+            return smaller + unadjusted;
+        }
+    #endif
+
+        return std::uniform_int_distribution<int>(a, b)(rng);
+    }
+
+    void GameLogic::randomProviderSeed(int seed)
+    {
+    #ifdef DEBUG
+        if (constant::debugRandom)
+        {
+            rngDebug = mulberry32(static_cast<uint32_t>(seed));
+            return;
+        }
+    #endif
+
+        rng.seed(seed);
+    }
+
+#ifdef DEBUG
+    // chatgpt made this function because this is way too complicated for my beginner ass
+    std::function<double()> GameLogic::mulberry32(uint32_t seed) {
+        return [seed]() mutable -> double {
+            uint32_t t = seed += 0x6D2B79F5;
+
+            t = (t ^ (t >> 15)) * (t | 1);
+            t ^= t + ((t ^ (t >> 7)) * (t | 61));
+
+            return static_cast<double>(t ^ (t >> 14)) / 4294967296.0;
+        };
+    }
+#endif
 }

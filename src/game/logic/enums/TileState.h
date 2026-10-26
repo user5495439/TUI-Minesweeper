@@ -9,7 +9,7 @@ namespace game::logic
         Flag,
         QMark,
         MisplacedFlag,
-        ExplodedMine,
+        RevealedMine,
         Border,
         OOB
     };

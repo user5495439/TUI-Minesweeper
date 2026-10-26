@@ -1,12 +1,13 @@
 #pragma once
 
 #include "../../core/xy.h"
-#include "enums/BoardTile.h"
+#include "enums/MineState.h"
 #include "enums/RevealResult.h"
 #include "enums/TileState.h"
 #include "../enums/PublicTile.h"
 #include "../enums/GameStatus.h"
 #include "../constant/constants.h"
+#include <functional>
 #include <random>
 #include <vector>
 
@@ -37,9 +38,21 @@ namespace game::logic
         // in this C++ version i'll just use a struct instead of two separate arrays because it will be cleaner this way i think
         struct Tile
         {
-            int number;    // enums::BoardTile
+            int number;
             TileState state;
+            MineState mine;
         };
+
+    #ifdef DEBUG
+        struct FullTileDataDebug
+        {
+            Tile* tilePtr;
+            enums::PublicTile pTile;
+            core::XY xy;
+        };
+    #endif
+
+        static constexpr int invalidNumber = -1;
 
         GameLogic() {};
         GameLogic(GameConfig Config);
@@ -57,18 +70,24 @@ namespace game::logic
         int getRemainingMines() { return remainingMines; }
 
         Tile* getTilePtr(core::XY xy) { return config.editBoard ? tilePtr(xy) : nullptr; };
+
+    #ifdef DEBUG
+        FullTileDataDebug getFullTileDataDebug(core::XY xy) { return { tilePtr(xy), getPublicTile(xy), xy }; };
+    #endif
     private:
 
         static constexpr Tile borderTile
         {
-            BoardTile::Unknown,
-            TileState::Border
+            invalidNumber,
+            TileState::Border,
+            MineState::Unknown
         };
 
         static constexpr Tile oobTile
         {
-            BoardTile::Unknown,
-            TileState::OOB
+            invalidNumber,
+            TileState::OOB,
+            MineState::Unknown
         };
 
         enums::GameStatus gameStatus;
@@ -81,6 +100,9 @@ namespace game::logic
         int revealedTileCounter;
         int gameMoves;
         int remainingMines;
+    #ifdef DEBUG
+        std::function<double()> rngDebug;
+    #endif
 
         Tile* tilePtr(core::XY xy) { return inBounds(xy) ? &board[getBoardIndex(xy)] : nullptr; };
         RevealResult tileReveal(core::XY xy);
@@ -92,5 +114,10 @@ namespace game::logic
         void generateBorder();
         void gameOver(enums::GameStatus status);
         int getBoardIndex(core::XY xy) { return xy.y * vectorSizes.x + xy.x; };
+        int randomProvider(int a, int b);
+        void randomProviderSeed(int seed);
+    #ifdef DEBUG
+        std::function<double()> mulberry32(uint32_t seed);
+    #endif
     };
 }

@@ -1,6 +1,9 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
 make DEBUG=1
 echo ""
-build/minesweeper
+chmod +x "$SCRIPT_DIR/build/minesweeper"
+"$SCRIPT_DIR/build/minesweeper"
 make clean

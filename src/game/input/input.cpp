@@ -32,6 +32,9 @@ namespace game::input
             return;
 
         gameLogic->revealTile(mouseGamePos);
+
+        if (*Game::getShowCheatUIPtr())
+            Game::cheat();
     }
 
     void GameInput::middleClick()
@@ -50,6 +53,9 @@ namespace game::input
             return;
 
         gameLogic->placeFlag(mouseGamePos);
+
+        if (*Game::getShowCheatUIPtr())
+            Game::cheat();
     }
 
     GameInput::InputType GameInput::readInput()
@@ -81,30 +87,42 @@ namespace game::input
     {
         for (const char& c : kbInput)
         {
-            if (c == constant::kbExit)
+            switch (c)
             {
-                Game::exitGame();
-            }
-
-            if (c == constant::kbResetCamera)
-            {
-                Game::resetGameOffsets();
-            }
-
-            if (c == constant::kbCheat)
-            {
-                Game::cheat();
-            }
-
-            if (c == constant::kbToggleCheatUI)
-            {
-                bool* showCheatUI = Game::getShowCheatUIPtr();
-                *showCheatUI = !*showCheatUI;
-                
-                if (*showCheatUI == true)
+                case constant::kbExit:
+                {
+                    Game::exitGame();
+                    break;
+                }
+                case constant::kbResetCamera:
+                {
+                    Game::resetGameOffsets();
+                    break;
+                }
+                case constant::kbCheat:
                 {
                     Game::cheat();
+                    break;
                 }
+                case constant::kbToggleCheatUI:
+                {
+                    bool* showCheatUI = Game::getShowCheatUIPtr();
+                    *showCheatUI = !*showCheatUI;
+                    
+                    if (*showCheatUI)
+                        Game::cheat();
+
+                    break;
+                }
+            #ifdef DEBUG
+                case constant::kbToggleDebugMouse:
+                {
+                    bool* debugMouse = Game::getDebugMousePtr();
+                    *debugMouse = !*debugMouse;
+
+                    break;
+                }
+            #endif
             }
         }
     }
@@ -150,6 +168,13 @@ namespace game::input
         }
 
         wasMousePos = mousePos;
+
+    #ifdef DEBUG
+        if (*Game::getDebugMousePtr() == true)
+        {
+            Game::tileDebugInfo(mouseGamePos);
+        }
+    #endif
     }
 
     core::XY GameInput::calculateMouseGameCoords()

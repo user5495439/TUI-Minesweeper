@@ -39,6 +39,10 @@ namespace game::cheat::logic
 
         isolatedEdgeCellsSolver();
         probabilityStuff();
+
+    #ifdef DEBUG
+        verifyChances();
+    #endif
     }
 
     void CheatsLogic::reset()
@@ -126,6 +130,9 @@ namespace game::cheat::logic
                     {
                         chanceTile->chance = 100;
                         result = true;
+                    #ifdef DEBUG
+                        chanceTile->chanceFrom = 0;
+                    #endif
                     }
                 }
             }
@@ -178,6 +185,9 @@ namespace game::cheat::logic
                     {
                         chanceTile->chance = 0;
                         result = true;
+                    #ifdef DEBUG
+                        chanceTile->chanceFrom = 1;
+                    #endif
                     }
                 }
             }
@@ -255,6 +265,9 @@ namespace game::cheat::logic
                             return;
 
                         nChanceTile->chance = chance;
+                    #ifdef DEBUG
+                        nChanceTile->chanceFrom = 2;
+                    #endif
                     });
                 }
             }
@@ -286,6 +299,7 @@ namespace game::cheat::logic
         // exy, edge x and y
         core::XY exy = getNextEdgeTile({0, 0});
 
+        // Calculate arrangements and probabilities
         while (exy.y > -1)
         {
             arrBoard.push_back( { exy, IsMine::Unknown } );
@@ -312,7 +326,12 @@ namespace game::cheat::logic
                 ChanceTile* chanceTile = getChanceTilePtr(*xy);
 
                 if (tile->state != logic::TileState::Revealed && chanceTile->edgeTile == false)
+                {
                     chanceTile->chance = std::round(static_cast<double>(remainingMines) / nonEdge * 100);
+                #ifdef DEBUG
+                    chanceTile->chanceFrom = 3;
+                #endif
+                }
             });
         }
     }
@@ -361,7 +380,7 @@ namespace game::cheat::logic
             if (nTile->state == logic::TileState::Revealed && nTile->number <= mineCount(arrBoard, *nxy) + probabilityHundredCount(*nxy))
             {
                 result = false;
-                *nxy += 2;
+                *nxy += 2;      // chatgpt REALLY suggests me that i remove this because it "introduces a bug" but to me it doesn't so i'm keeping this
             }
         });
 
@@ -398,7 +417,7 @@ namespace game::cheat::logic
             if (nTile->state == logic::TileState::Revealed && nTile->number >= nEdge - noMineCount(arrBoard, *nxy) - probabilityZeroCount(*nxy))
             {
                 result = false;
-                *nxy += 2;
+                *nxy += 2;      // chatgpt REALLY suggests me that i remove this because it "introduces a bug" but to me it doesn't so i'm keeping this
             }
         });
 
@@ -556,20 +575,23 @@ namespace game::cheat::logic
 
                 arrCount += nonEdgeCombinations;
 
-                loopEachTile([&](core::XY* xy) -> void
+                if (nonEdge > 0)
                 {
-                    GameLogic::Tile* tile = cheatGameLogic.getTilePtr(*xy);
+                    loopEachTile([&](core::XY* xy) -> void
+                    {
+                        GameLogic::Tile* tile = cheatGameLogic.getTilePtr(*xy);
 
-                    if (tile->state == logic::TileState::Revealed)
-                        return;
+                        if (tile->state == logic::TileState::Revealed)
+                            return;
 
-                    ChanceTile* chanceTile = getChanceTilePtr(*xy);
+                        ChanceTile* chanceTile = getChanceTilePtr(*xy);
 
-                    if (chanceTile->edgeTile == true)
-                        return;
+                        if (chanceTile->edgeTile == true)
+                            return;
 
-                    chanceTile->mineArr += remainingMines / nonEdge * nonEdgeCombinations;
-                });
+                        chanceTile->mineArr += static_cast<double>(remainingMines) / nonEdge * nonEdgeCombinations;
+                    });
+                }
             }
         }
 
@@ -591,10 +613,20 @@ namespace game::cheat::logic
                 edgeChance = std::round((static_cast<double>(chanceTile->mineArr) / arrCount) * 100);
 
                 if (allProbability == false && (edgeChance == 100 || edgeChance == 0))
+                {
                     chanceTile->chance = edgeChance;
-
+                #ifdef DEBUG
+                    chanceTile->chanceFrom = 4;
+                #endif
+                }
+                    
                 if (allProbability)
+                {
                     chanceTile->chance = edgeChance;
+                #ifdef DEBUG
+                    chanceTile->chanceFrom = 5;
+                #endif
+                }
             }
 
             if (tile->state != logic::TileState::Revealed && chanceTile->edgeTile == false && chanceTile->chance == -1)
@@ -604,37 +636,23 @@ namespace game::cheat::logic
                 nonEdgeChance = std::round((static_cast<double>(chanceTile->mineArr) / arrCount) * 100);
 
                 if (allProbability == false && (nonEdgeChance == 100 || nonEdgeChance == 0))
+                {
                     chanceTile->chance = nonEdgeChance;
+                #ifdef DEBUG
+                    chanceTile->chanceFrom = 6;
+                #endif
+                }
 
                 if (allProbability)
+                {
                     chanceTile->chance = nonEdgeChance;
+                #ifdef DEBUG
+                    chanceTile->chanceFrom = 7;
+                #endif
+                }
             }
         });
     }
-
-    /*
-    uint64_t CheatsLogic::productRange(uint a, uint b)
-    {
-        uint64_t prd = a;
-        uint i = a;
-
-        while (i++ < b)
-            prd *= i;
-
-        return prd;
-    }
-
-    uint64_t CheatsLogic::combinations(uint n, uint r)
-    {
-        if (n == r || r == 0)
-            return 1;
-
-        if (r < n - r)
-            r = n - r;
-
-        return productRange(r + 1, n) / productRange(1, n - r);
-    }
-    */
 
     uint64_t CheatsLogic::combinations(uint n, uint r)
     {
@@ -653,4 +671,39 @@ namespace game::cheat::logic
 
         return result;
     }
+
+#ifdef DEBUG
+    void CheatsLogic::verifyChances()
+    {
+        loopEachTile([&](core::XY* xy) -> void
+        {
+            ChanceTile* chanceTile = getChanceTilePtr(*xy);
+            GameLogic::Tile* tile = gameLogic->getFullTileDataDebug(*xy + gameConfig.borderThickness).tilePtr;
+
+            int8_t chance = chanceTile->chance;
+            MineState mine = tile->mine;
+
+            if (chance == 100)
+            {
+                if (mine == MineState::Yes)
+                    chanceTile->chanceIsTrue = 1;
+                else
+                    chanceTile->chanceIsTrue = 0;
+
+                return;
+            }
+            else if (chance == 0)
+            {
+                if (mine == MineState::Yes)
+                    chanceTile->chanceIsTrue = 0;
+                else
+                    chanceTile->chanceIsTrue = 1;
+
+                return;
+            }
+
+            chanceTile->chanceIsTrue = 2;
+        });
+    }
+#endif
 }

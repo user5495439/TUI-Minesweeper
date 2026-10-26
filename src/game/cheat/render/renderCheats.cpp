@@ -9,6 +9,8 @@ namespace game::cheat::render
 
         if (true)
             drawEdgeTiles();
+
+        Renderer::resetColor();
     }
 
 //private:
@@ -23,12 +25,12 @@ namespace game::cheat::render
             {
                 logic::CheatsLogic::ChanceTile* chanceTile = cheatsLogic->getChanceTilePtr(xy);
 
-                //if (chanceTile->edgeTile == false)
-                    //continue;
-
                 int8_t chance = chanceTile->chance;
 
-                int chanceNumber = chanceTile->chance;
+                if (chance == -1)
+                    continue;
+
+                int chanceNumber = static_cast<int>(chance);
                 chanceNumber = chanceNumber > 99 ? 99 : chanceNumber;
 
                 std::string stringToWrite = std::to_string(chanceNumber);
@@ -66,6 +68,6 @@ namespace game::cheat::render
             return RGB::fromColors(colors::DarkGray);
 
         if (chance <= -1)
-            return RGB::fromColors(colors::DarkGray);
+            return RGB::fromColors(colors::Black);
     }
 }

@@ -29,7 +29,7 @@ only a little bit of AI used, i have used AI only to learn C++ and for stuff i h
 ## Recommended terminals
 from what I have tested, this game runs the best in **Kitty**, **XTerm** and **Gnome Terminal**. what i mean with the best is good performance and no terminal specific weird behavior.
 
-terminals where the game doesn't run optimally: **Konsole** (stuttering, performance), **Cool Retro Term** (segmentation fault when zooming out), **QTerminal** (weird mouse behavior)
+terminals where the game doesn't run optimally: **Konsole** (stuttering, performance, bugs), **Cool Retro Term** (segmentation fault when zooming out), **QTerminal** (weird mouse behavior)
 
 ## Info and default controls
 - the default map configuration is 32 x 16 with 99 mines
@@ -37,6 +37,7 @@ terminals where the game doesn't run optimally: **Konsole** (stuttering, perform
 - top right side number tells the amount of moves
 - ctrl+c for exit
 - f to reset camera
+- x to toggle probability cheat UI, c to update probabilites
 - left click on a tile to reveal it
 - right click to place a flag or question mark
 - middle click for moving the camera

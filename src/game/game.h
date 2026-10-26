@@ -27,7 +27,9 @@ namespace game
         static void resizeGame(int) { gotResize = 1; }
         static void exitGame() { gotExit = true; }
     #ifdef DEBUG
+        static void tileDebugInfo(core::XY xy);
         static std::string* getDebugTextPtr() { return &debugText; };
+        static bool* getDebugMousePtr() { return &debugMouse; };
     #endif
 
     private:
@@ -44,7 +46,8 @@ namespace game
         static volatile inline sig_atomic_t gotResize = 0;
         static inline bool gotExit = false;
     #ifdef DEBUG
-        inline static std::string debugText = "";
+        static inline std::string debugText = "";
+        static inline bool debugMouse = false;
     #endif
 
         static void update();

@@ -22,6 +22,10 @@ namespace game::cheat::logic
             int8_t chance = -1;
             bool edgeTile;
             uint64_t mineArr;
+        #ifdef DEBUG
+            int chanceFrom = -1;
+            int chanceIsTrue = -1;
+        #endif
         };
 
         void cheat();
@@ -29,6 +33,9 @@ namespace game::cheat::logic
         core::XY getBoardStartPos() { return boardStartPos; };
         core::XY getSizes() { return sizes; };
         ChanceTile* getChanceTilePtr(core::XY xy) { return inBounds(xy) ? &chancesBoard[getBoardIndex(xy)] : nullptr; }
+    #ifdef DEBUG
+        GameLogic* getDebugCheatGameLogicPtr() { return &cheatGameLogic; }
+    #endif
     private:
         enum class IsMine
         {
@@ -72,6 +79,9 @@ namespace game::cheat::logic
         uint64_t combinations(uint n, uint r);
         bool inBounds(core::XY xy) { return xy.x >= 0 && xy.x < sizes.x && xy.y >= 0 && xy.y < sizes.y; }
         int getBoardIndex(core::XY xy) { return xy.y * sizes.x + xy.x; };
+    #ifdef DEBUG
+        void verifyChances();
+    #endif
 
         template<typename Func>
         void loopEachTile(Func function)
