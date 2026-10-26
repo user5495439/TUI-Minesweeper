@@ -1,12 +1,13 @@
 #pragma once
 
 #include "../../core/xy.h"
-#include "enums/BoardTile.h"
+#include "enums/MineState.h"
 #include "enums/RevealResult.h"
 #include "enums/TileState.h"
 #include "../enums/PublicTile.h"
 #include "../enums/GameStatus.h"
 #include "../constant/constants.h"
+#include <functional>
 #include <random>
 #include <vector>
 
@@ -30,9 +31,28 @@ namespace game::logic
             bool placeMisplacedFlags;
             bool minesReplaceFlags;
 
-            // allows setTile() to work
+            // allows getTilePtr() to return a pointer
             bool editBoard;
         };
+
+        // in this C++ version i'll just use a struct instead of two separate arrays because it will be cleaner this way i think
+        struct Tile
+        {
+            int number;
+            TileState state;
+            MineState mine;
+        };
+
+    #ifdef DEBUG
+        struct FullTileDataDebug
+        {
+            Tile* tilePtr;
+            enums::PublicTile pTile;
+            core::XY xy;
+        };
+    #endif
+
+        static constexpr int invalidNumber = -1;
 
         GameLogic() {};
         GameLogic(GameConfig Config);
@@ -40,33 +60,34 @@ namespace game::logic
         void revealTile(core::XY xy);
         void placeFlag(core::XY xy);
         bool inBounds(core::XY xy);  // returns true if coordinate is in game bounds and false if not
-        enums::PublicTile getTile(core::XY xy) { return tileToPublicTile(getTilePtr(xy)); };
+        static enums::PublicTile tileToPublicTile(const Tile* tile);
+        static Tile publicTileToTile(const enums::PublicTile pTile);
+        enums::PublicTile getPublicTile(core::XY xy) { return tileToPublicTile(tilePtr(xy)); };
         const GameConfig& getConfig() { return config; }
         core::XY getVectorDimensions() { return vectorSizes; }
         enums::GameStatus getGameStatus() { return gameStatus; }
         int getMoves() { return gameMoves; }
         int getRemainingMines() { return remainingMines; }
 
-        void setTile(core::XY xy, int number, TileState state);
-    private:
+        Tile* getTilePtr(core::XY xy) { return config.editBoard ? tilePtr(xy) : nullptr; };
 
-        // in this C++ version i'll just use a struct instead of two separate arrays because it will be cleaner this way i think
-        struct Tile
-        {
-            int number;    // enums::BoardTile
-            TileState state;
-        };
+    #ifdef DEBUG
+        FullTileDataDebug getFullTileDataDebug(core::XY xy) { return { tilePtr(xy), getPublicTile(xy), xy }; };
+    #endif
+    private:
 
         static constexpr Tile borderTile
         {
-            BoardTile::Unknown,
-            TileState::Border
+            invalidNumber,
+            TileState::Border,
+            MineState::Unknown
         };
 
         static constexpr Tile oobTile
         {
-            BoardTile::Unknown,
-            TileState::OOB
+            invalidNumber,
+            TileState::OOB,
+            MineState::Unknown
         };
 
         enums::GameStatus gameStatus;
@@ -79,10 +100,11 @@ namespace game::logic
         int revealedTileCounter;
         int gameMoves;
         int remainingMines;
+    #ifdef DEBUG
+        std::function<double()> rngDebug;
+    #endif
 
-        Tile* getTilePtr(core::XY xy) { return inBounds(xy) ? &board[getBoardIndex(xy)] : nullptr; };
-        enums::PublicTile tileToPublicTile(const Tile* tile);
-        Tile publicTileToTile(const enums::PublicTile pTile);
+        Tile* tilePtr(core::XY xy) { return inBounds(xy) ? &board[getBoardIndex(xy)] : nullptr; };
         RevealResult tileReveal(core::XY xy);
         RevealResult massTileReveal(core::XY xy, bool skipFlagsCheck); // quick reveal system so it's less annoying to play to some
         void placeFlagsOnMines();
@@ -92,5 +114,10 @@ namespace game::logic
         void generateBorder();
         void gameOver(enums::GameStatus status);
         int getBoardIndex(core::XY xy) { return xy.y * vectorSizes.x + xy.x; };
+        int randomProvider(int a, int b);
+        void randomProviderSeed(int seed);
+    #ifdef DEBUG
+        std::function<double()> mulberry32(uint32_t seed);
+    #endif
     };
 }

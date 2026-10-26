@@ -110,6 +110,7 @@ namespace core::input
 
         sigaction(SIGINT, &sa, nullptr);
         sigaction(SIGTERM, &sa, nullptr);
+        sigaction(SIGFPE, &sa, nullptr);
     #ifdef SIGSEGV
         sigaction(SIGSEGV, &sa, nullptr);
     #endif

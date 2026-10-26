@@ -47,58 +47,16 @@ namespace game::render
             { "06", Cyan, Black },
             { "07", DarkGray, Black },
             { "08", DarkRed, Black },
-            { "<>", DarkGray, Black },
+            { "<>", DarkGray, DarkRed },
             {"[]", Gray, DarkGray},
             {"  ", Black, Black},
             {"[]", Red, DarkGray},
             {"??", Black, DarkGray},
             {"[]", DarkGray, Red},
-            {"<>", DarkGray, DarkRed},
+            {"<>", DarkGray, Black},
             {"  ", Background, White},
             {"  ", Foreground, Background}
         };
-
-        /*static inline const TileAppearance hiddenTileAppearance[]
-        {
-            {"[]", Gray, DarkGray},
-            {"  ", Black, Black},
-            {"[]", Red, DarkGray},
-            {"??", Black, DarkGray},
-            {"[]", DarkGray, Red},
-            {"<>", DarkGray, DarkRed},
-            {"  ", Background, White},
-            {"  ", Foreground, Background}
-        };
-
-        static inline const TileAppearance revealedTileAppearance[]
-        {
-            { "  ", Black, Black },
-            { "01", Blue, Black },
-            { "02", Green, Black },
-            { "03", Red, Black },
-            { "04", Magenta, Black },
-            { "05", DarkYellow, Black },
-            { "06", Cyan, Black },
-            { "07", DarkGray, Black },
-            { "08", DarkRed, Black },
-            { "<>", DarkGray, Black },
-            { "??", Foreground, Red }
-        };*/
-
-        /*static inline const TileAppearance revealedTileAppearanceAlt[]
-        {
-            { "  ", Black, Black },
-            { "11", Blue, Black },
-            { "22", Green, Black },
-            { "33", Red, Black },
-            { "44", Magenta, Black },
-            { "55", DarkYellow, Black },
-            { "66", Cyan, Black },
-            { "77", DarkGray, Black },
-            { "88", DarkRed, Black },
-            { "<>", DarkGray, Black },
-            { "??", Foreground, Red }
-        };*/
 
         logic::GameLogic* gameLogic = nullptr;
 

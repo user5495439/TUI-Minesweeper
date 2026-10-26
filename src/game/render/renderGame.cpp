@@ -24,7 +24,7 @@ namespace game::render
 
             for (xy.x = cuts.left; xy.x < sizes.x - cuts.right; xy.x++)
             {
-                enums::PublicTile tile = gameLogic->getTile(xy);
+                enums::PublicTile tile = gameLogic->getPublicTile(xy);
 
                 TileAppearance tileAppearance = tileAppearances[static_cast<int>(tile)];
 
@@ -151,6 +151,8 @@ namespace game::render
                 Renderer::WriteFormatted(retryString, Renderer::TextAlignment::RightToLeft);
             }
         }
+
+        Renderer::resetColor();
     }
 
 #ifdef DEBUG
@@ -166,6 +168,8 @@ namespace game::render
 
         Renderer::setCursorPos(xy);
         Renderer::WriteFormatted(*Game::getDebugTextPtr(), Renderer::TextAlignment::Centered);
+
+        Renderer::resetColor();
     }
 #endif
 

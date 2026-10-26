@@ -65,7 +65,7 @@ namespace core
 
     XY operator-(XY lhs, const int rhs)
     {
-        lhs += rhs;
+        lhs -= rhs;
         return lhs;
     }
 
@@ -138,7 +138,7 @@ namespace core
 
     pXY operator-(pXY lhs, const int rhs)
     {
-        lhs += rhs;
+        lhs -= rhs;
         return lhs;
     }
 

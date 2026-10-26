@@ -21,7 +21,7 @@ namespace game::enums
         Flag = 12,
         QMark = 13,
         MisplacedFlag = 14,
-        ExplodedMine = 15,
+        RevealedMine = 15,
         Border = 16,
         OOB = 17
     };

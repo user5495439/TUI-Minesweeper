@@ -6,7 +6,9 @@ namespace game::constant
     inline constexpr bool minesInDensity = false;    // if enabled, the mines count will instead be percentage of the map covered in mines
     inline constexpr int gameWidth = 32;
     inline constexpr int gameHeight = 16;
+    inline constexpr int fixedSeed = 0;
     inline constexpr int borderThickness = 1;
+    inline constexpr bool useFixedSeed = false;
     inline constexpr bool canMoveMap = true;
     inline constexpr bool cheatsEnabled = true;
     inline constexpr bool qMarkEnabled = true;
@@ -14,10 +16,18 @@ namespace game::constant
     inline constexpr bool revealZeroes = true;
     inline constexpr bool placeMisplacedFlags = true;
     inline constexpr bool minesReplaceFlags = false;
+#ifdef DEBUG
+    inline constexpr bool debugRandom = false;
+#endif
 
     //inline constexpr bool tileNumbersStartWithZero = true;  // tiles are numbered as "05" instead of "55"
 
     inline constexpr char kbResetCamera = 'f';
+    inline constexpr char kbCheat = 'c';
+    inline constexpr char kbToggleCheatUI = 'x';
+#ifdef DEBUG
+    inline constexpr char kbToggleDebugMouse = 'g';
+#endif
     inline constexpr char kbExit = 3;   // 3 = ctrl + c
 
     inline constexpr char minesText[] = "Mines: ";
