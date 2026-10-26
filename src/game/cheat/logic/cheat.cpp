@@ -537,7 +537,7 @@ namespace game::cheat::logic
 
     void CheatsLogic::probabilityCalculation()
     {
-        uint64_t arrCount = 0;
+        double arrCount = 0;
         int nonEdge = nonEdgeCount();
         int nHundred = hundredCount();
 
@@ -559,7 +559,7 @@ namespace game::cheat::logic
 
             if (remainingMines >= 0 && remainingMines <= nonEdge)
             {
-                uint64_t nonEdgeCombinations = combinations(static_cast<uint>(nonEdge), static_cast<uint>(remainingMines));
+                double nonEdgeCombinations = combinations(static_cast<uint>(nonEdge), static_cast<uint>(remainingMines));
 
                 for (size_t i = 0; i < arrBoard->size(); i++)
                 {
@@ -654,7 +654,7 @@ namespace game::cheat::logic
         });
     }
 
-    uint64_t CheatsLogic::combinations(uint n, uint r)
+    double CheatsLogic::combinations(uint n, uint r)
     {
         if (r > n)
             return 0;
@@ -662,11 +662,11 @@ namespace game::cheat::logic
         if (r > n - r)
             r = n - r;
 
-        uint64_t result = 1;
+        double result = 1;
 
         for (uint i = 1; i <= r; i++)
         {
-            result = result * (n - r + i) / i;
+            result = result * (n - r + i) / static_cast<double>(i);
         }
 
         return result;

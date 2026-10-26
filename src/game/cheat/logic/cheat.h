@@ -21,7 +21,7 @@ namespace game::cheat::logic
         {
             int8_t chance = -1;
             bool edgeTile;
-            uint64_t mineArr;
+            double mineArr;
         #ifdef DEBUG
             int chanceFrom = -1;
             int chanceIsTrue = -1;
@@ -76,7 +76,7 @@ namespace game::cheat::logic
         int probabilityHundredCount(core::XY xy);
         int probabilityZeroCount(core::XY xy);
         void probabilityCalculation();
-        uint64_t combinations(uint n, uint r);
+        double combinations(uint n, uint r);
         bool inBounds(core::XY xy) { return xy.x >= 0 && xy.x < sizes.x && xy.y >= 0 && xy.y < sizes.y; }
         int getBoardIndex(core::XY xy) { return xy.y * sizes.x + xy.x; };
     #ifdef DEBUG
